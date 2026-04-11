@@ -106,6 +106,44 @@ def test_handle_tool_call_fetch_error_becomes_is_error_true():
     assert "private network" in result.text
 
 
+def test_handle_tool_call_tolerates_website_synonym_for_url():
+    """Max tolerance: model passes `website` instead of `url`."""
+    fake_result = FetchResult(
+        title="X", final_url="https://x.com/", body="body", was_truncated=False
+    )
+    with patch(
+        "apfel_mcp.url_fetch_server.fetch_and_extract", return_value=fake_result
+    ) as mock_fetch:
+        result = _handle_tool_call("fetch", {"website": "https://x.com/"})
+    mock_fetch.assert_called_once()
+    assert result.is_error is False
+
+
+def test_handle_tool_call_tolerates_arbitrary_unknown_key_for_url():
+    """Max tolerance: any non-empty string under any unknown key counts as the URL."""
+    fake_result = FetchResult(
+        title="X", final_url="https://x.com/", body="body", was_truncated=False
+    )
+    with patch(
+        "apfel_mcp.url_fetch_server.fetch_and_extract", return_value=fake_result
+    ) as mock_fetch:
+        result = _handle_tool_call("fetch", {"wibble": "https://x.com/"})
+    mock_fetch.assert_called_once()
+    assert result.is_error is False
+
+
+def test_handle_tool_call_tolerates_limit_synonym_for_max_chars():
+    """Model passes `limit` instead of `max_chars`. Should still forward it."""
+    fake_result = FetchResult(
+        title="X", final_url="https://x.com/", body="body", was_truncated=False
+    )
+    with patch(
+        "apfel_mcp.url_fetch_server.fetch_and_extract", return_value=fake_result
+    ) as mock_fetch:
+        _handle_tool_call("fetch", {"url": "https://x.com/", "limit": 2000})
+    mock_fetch.assert_called_once_with("https://x.com/", max_chars=2000)
+
+
 def test_handle_tool_call_unexpected_exception_becomes_is_error_true():
     """Any non-FetchError crash is wrapped as a tool error, not propagated."""
     with patch(

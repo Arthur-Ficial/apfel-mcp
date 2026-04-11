@@ -18,6 +18,7 @@ from __future__ import annotations
 from typing import Any
 
 from apfel_mcp import __version__
+from apfel_mcp.common.arg_tolerance import extract_int, extract_string
 from apfel_mcp.common.fetch import (
     DEFAULT_MAX_CHARS,
     FetchError,
@@ -61,31 +62,29 @@ TOOLS: list[dict[str, Any]] = [
 ]
 
 
-_URL_KEYS = ("url", "link", "page", "address", "uri", "u")
-"""Argument-key synonyms the model sometimes invents instead of `url`."""
+_URL_KEYS = (
+    "url", "link", "page", "address", "uri", "u",
+    "href", "website", "site", "source", "target", "endpoint", "location",
+)
+"""Known argument-key synonyms for `url`.
 
-
-def _extract_url(args: dict[str, Any]) -> str | None:
-    """Find the URL the model intended to pass, even if it used the wrong key."""
-    for key in _URL_KEYS:
-        value = args.get(key)
-        if isinstance(value, str) and value.strip():
-            return value.strip()
-    return None
+Anything not in this list is still accepted via `extract_string`'s
+fallback: any non-empty string value under any key not in COUNT_KEYS.
+"""
 
 
 def _handle_tool_call(name: str, args: dict[str, Any]) -> ToolResult:
     """Tool handler for the fetch tool.
 
-    Tolerates the common argument-key synonyms the model invents
-    (`link`, `page`, `address`, etc.) and wraps all errors as
-    ToolResult(is_error=True) so the model can react rather than
-    crashing the MCP subprocess.
+    Maximum tolerance: any reasonable key the model invents for the URL
+    argument gets accepted (see `extract_string`). Same for max_chars.
+    All errors wrapped as ToolResult(is_error=True) so the model can
+    react rather than crashing the MCP subprocess.
     """
     if name != "fetch":
         return ToolResult(text=f"unknown tool: {name}", is_error=True)
 
-    url = _extract_url(args)
+    url = extract_string(args, _URL_KEYS)
     if not url:
         return ToolResult(
             text=(
@@ -95,13 +94,7 @@ def _handle_tool_call(name: str, args: dict[str, Any]) -> ToolResult:
             is_error=True,
         )
 
-    max_chars_raw = args.get("max_chars", DEFAULT_MAX_CHARS)
-    try:
-        max_chars = int(max_chars_raw)
-    except (TypeError, ValueError):
-        max_chars = DEFAULT_MAX_CHARS
-    if max_chars <= 0:
-        max_chars = DEFAULT_MAX_CHARS
+    max_chars = extract_int(args, ("max_chars",), default=DEFAULT_MAX_CHARS)
 
     try:
         result = fetch_and_extract(url, max_chars=max_chars)
