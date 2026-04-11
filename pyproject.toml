@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "apfel-mcp"
-version = "0.1.0"
+version = "0.1.1"
 description = "Token-budget-optimized MCP servers for apfel (url-fetch + ddg-search + search-and-fetch)"
 readme = "README.md"
 license = { text = "MIT" }
@@ -27,7 +27,6 @@ dependencies = [
     "readability-lxml>=0.8.4",
     "beautifulsoup4>=4.12",
     "markdownify>=0.13",
-    "ddgs>=8.0",
 ]
 
 [project.optional-dependencies]

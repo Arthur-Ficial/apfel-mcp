@@ -6,4 +6,4 @@ server wrapping Apple's on-device FoundationModels LLM. Its context window is
 designed from the ground up to fit that budget.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"

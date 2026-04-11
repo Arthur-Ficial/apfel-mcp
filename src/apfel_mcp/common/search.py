@@ -1,8 +1,9 @@
 """DuckDuckGo search wrapper with caching, formatting, and error handling.
 
 This module is the core of the ddg-search MCP and is also called by
-search-and-fetch. It wraps the unofficial `ddgs` library (formerly
-`duckduckgo-search`, MIT) that scrapes DuckDuckGo's HTML endpoint.
+search-and-fetch. It scrapes DuckDuckGo's HTML endpoint directly using
+httpx + BeautifulSoup - no third-party DDG library, so the Homebrew
+formula stays simple (no Rust-compiled `primp` dep).
 
 DuckDuckGo has NO public web-search API. The Instant Answer API
 (`api.duckduckgo.com`) returns only summary boxes. Scraping
@@ -11,13 +12,17 @@ results. It is unsanctioned but widely used - OpenClaw's DDG extension
 (MIT) takes the same approach and documents it as "experimental,
 unofficial, fragile". We adopt that framing.
 
-On top of ddgs this module adds:
+On top of the raw scrape this module adds:
 1. A 60-second in-memory cache keyed by (query, max_results). Reduces
    DDG load when the model searches the same thing twice in one session.
 2. Token-budget-aware formatting: title truncated to 80 chars, snippet
    to 160 chars, total output hard-capped at 2000 chars.
 3. Friendly error messages for rate-limit / bot-challenge exceptions
    so the model sees "wait a moment" rather than a raw stack trace.
+4. DDG URL unwrapping (real URLs are hidden behind a `/l/?uddg=<encoded>`
+   redirect - we decode it).
+5. Bot-challenge detection: if the response HTML mentions "challenge"
+   or doesn't contain result rows, we raise a friendly error.
 
 The cache is process-local (plain module-level dict). Lives for the
 lifetime of the MCP subprocess. No persistence.
@@ -25,12 +30,18 @@ lifetime of the MCP subprocess. No persistence.
 
 from __future__ import annotations
 
+import ssl
 import time
 from dataclasses import dataclass, field
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
-from ddgs import DDGS
+import httpx
+from bs4 import BeautifulSoup
+
+# httpx's default verify=True fails on macOS + Python 3.14 + Homebrew
+# OpenSSL. See common/fetch.py for the full explanation. Same fix here.
+_DEFAULT_SSL_CONTEXT = ssl.create_default_context()
 
 # --- Configuration constants ---
 
@@ -99,17 +110,92 @@ def _cache_set(key: tuple[str, int], response: SearchResult) -> None:
     _CACHE[key] = (time.monotonic(), response)
 
 
-# --- ddgs indirection (so tests can patch) ---
+# --- DDG HTML scraper ---
+
+_DDG_HTML_ENDPOINT = "https://html.duckduckgo.com/html/"
+_DDG_TIMEOUT_SECONDS = 15.0
+_DDG_USER_AGENT = (
+    # DDG's HTML endpoint serves a challenge page for anything that
+    # looks like a script. A plausible browser User-Agent gets through.
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/605.1.15 (KHTML, like Gecko) "
+    "Version/17.0 Safari/605.1.15"
+)
+
+
+def _unwrap_ddg_url(href: str) -> str:
+    """Decode DDG's redirect wrapper.
+
+    DDG wraps real result URLs as `//duckduckgo.com/l/?uddg=<encoded>`
+    (or occasionally as a plain `/l/?uddg=...`). Unwrap to get the real
+    URL. Other hrefs (including already-real URLs) are returned as-is.
+    """
+    if not href:
+        return href
+    # Normalize protocol-relative URLs
+    if href.startswith("//"):
+        href = "https:" + href
+    parsed = urlparse(href)
+    if parsed.path.endswith("/l/") and parsed.query:
+        qs = parse_qs(parsed.query)
+        if qs.get("uddg"):
+            return unquote(qs["uddg"][0])
+    return href
+
 
 def _ddgs_text(query: str, max_results: int) -> list[dict[str, Any]]:
-    """Thin wrapper around `ddgs.DDGS().text(...)`.
+    """Scrape DuckDuckGo's HTML endpoint and return up to N result dicts.
 
-    Exists as a module-level function so tests can patch it without
-    touching the ddgs class. On failure, the underlying ddgs exception
-    propagates; `search()` wraps it into a SearchError.
+    Returns a list of {title, href, body} dicts compatible with the
+    shape the rest of this module expects. Raises on network errors -
+    `search()` wraps them into friendly SearchErrors.
+
+    Exists as a module-level function so tests can patch it.
     """
-    with DDGS() as ddgs:
-        return ddgs.text(query, max_results=max_results, region="wt-wt", safesearch="moderate")
+    with httpx.Client(
+        timeout=_DDG_TIMEOUT_SECONDS,
+        follow_redirects=True,
+        cookies=None,
+        headers={
+            "User-Agent": _DDG_USER_AGENT,
+            # html.duckduckgo.com expects a POST with the form-encoded query.
+        },
+        verify=_DEFAULT_SSL_CONTEXT,
+    ) as client:
+        response = client.post(
+            _DDG_HTML_ENDPOINT,
+            data={"q": query, "b": "", "kl": "wt-wt"},
+        )
+    response.raise_for_status()
+    html = response.text
+
+    # Bot-challenge heuristic: the endpoint serves an interstitial if
+    # it thinks we're a bot. Raise so `search()` can format a friendly
+    # error.
+    lower = html.lower()
+    if "anomaly" in lower or "unusual traffic" in lower:
+        raise RuntimeError(
+            "DuckDuckGoSearchException: Ratelimit / bot challenge detected"
+        )
+
+    soup = BeautifulSoup(html, "html.parser")
+    results: list[dict[str, Any]] = []
+    for result_div in soup.select(".result"):
+        if len(results) >= max_results:
+            break
+        title_a = result_div.select_one(".result__a") or result_div.select_one("a.result__url")
+        snippet_el = result_div.select_one(".result__snippet")
+        if title_a is None:
+            continue
+        raw_href = title_a.get("href", "") or ""
+        href = _unwrap_ddg_url(str(raw_href))
+        title = title_a.get_text(strip=True)
+        body = snippet_el.get_text(" ", strip=True) if snippet_el else ""
+        if not title or not href:
+            continue
+        results.append({"title": title, "href": href, "body": body})
+
+    return results
 
 
 # --- Formatting ---
