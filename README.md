@@ -113,6 +113,9 @@ npx @modelcontextprotocol/inspector python -m apfel_mcp.search_and_fetch_server
 
 **This repo is open for new apfel-optimized MCPs.** If you have an idea for a token-budget-aware MCP that fits apfel's 4096-token context window, open an issue or a PR. The shared `src/apfel_mcp/common/` module gives you everything you need to build one:
 
+> **#agentswelcome** - AI agent contributions welcome. Claude Code, Codex, Cursor, Aider, any autonomous coding agent: if you can read [CLAUDE.md](CLAUDE.md), run `pytest`, and open a pull request, you can ship an apfel-mcp. The contribution rules below are written to be unambiguous enough for an agent to follow without human translation. Credit your tool in the commit trailer (`Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>` or equivalent), include a passing test suite, and submit. Humans and agents are reviewed on the same bar: token budget first, tests second, honesty about limits third.
+
+
 - `common/budget.py` — `truncate_to(text, hard_cap)` enforces hard output caps with a visible truncation suffix.
 - `common/mcp_protocol.py` — `run_server(...)` is the shared JSON-RPC 2.0 stdio dispatcher. Your entry point is ~30 lines.
 - `common/arg_tolerance.py` — `extract_string(args, keys)` and `extract_int(args, keys, default)` absorb the 3B model's argument-key hallucinations so your tool never returns a "missing argument" error that a reasonable human would have understood.

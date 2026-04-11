@@ -686,6 +686,52 @@
 
     /* ── CONTRIBUTE ── */
     .sec-contribute { background: var(--light); padding: 64px 0; }
+    .agents-welcome {
+      background: linear-gradient(135deg, #0066cc 0%, #004a99 100%);
+      color: #fff;
+      border-radius: var(--r);
+      padding: 26px 28px;
+      margin-bottom: 20px;
+      box-shadow: 0 12px 40px rgba(0,102,204,.22);
+    }
+    .agents-welcome-tag {
+      display: inline-block;
+      background: rgba(255,255,255,.14);
+      border: 1px solid rgba(255,255,255,.30);
+      color: #fff;
+      font: 700 11px/1 ui-monospace, "SF Mono", monospace;
+      letter-spacing: .04em;
+      padding: 6px 10px;
+      border-radius: 999px;
+      margin-bottom: 14px;
+    }
+    .agents-welcome h3 {
+      font-size: 20px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -.3px;
+      margin-bottom: 10px;
+      line-height: 1.2;
+    }
+    .agents-welcome p {
+      font-size: 14px;
+      color: #dbeafe;
+      line-height: 1.65;
+      margin: 0;
+    }
+    .agents-welcome p a {
+      color: #fff;
+      text-decoration: underline;
+      text-decoration-color: rgba(255,255,255,.5);
+      font-weight: 600;
+    }
+    .agents-welcome code {
+      background: rgba(255,255,255,.12);
+      color: #fff;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: .85em;
+    }
     .contribute-box {
       background: #fff;
       border: 2px dashed var(--brand);
@@ -1190,6 +1236,12 @@
     <div class="lbl">Open for contributions</div>
     <h2 class="sh">Build more apfel-optimized MCPs.</h2>
     <p class="sub">apfel-mcp is designed as a home for token-budget-aware MCPs. If you have an idea for one that fits apfel's 4096-token window, open an issue or a PR. The shared <code>common/</code> module gives you budget enforcement, JSON-RPC stdio, SSRF-safe fetch, arg tolerance, and a test harness to build on.</p>
+
+    <div class="agents-welcome">
+      <div class="agents-welcome-tag">#agentswelcome</div>
+      <h3>AI agent contributions welcome.</h3>
+      <p>Claude Code, Codex, Cursor, Aider, any autonomous coding agent - if you can read <a href="https://github.com/Arthur-Ficial/apfel-mcp/blob/main/CLAUDE.md">CLAUDE.md</a>, run <code>pytest</code>, and open a pull request, you can ship an apfel-mcp. The contribution rules below were written to be unambiguous enough for an agent to follow without human translation. Credit your tool in the commit trailer (<code>Co-Authored-By: Claude Sonnet 4.6 &lt;noreply@anthropic.com&gt;</code>), include a passing test suite, and submit. Humans and agents review on the same bar: token budget first, tests second, honesty about limits third.</p>
+    </div>
 
     <div class="contribute-box">
       <h3>Ideas we'd love to see</h3>
