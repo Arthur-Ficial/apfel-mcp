@@ -260,6 +260,9 @@ def _handle_tool_call(name: str, args: dict[str, Any]) -> ToolResult:
 
 def main() -> None:
     """Entry point declared in pyproject.toml as apfel-mcp-search-and-fetch."""
+    from apfel_mcp._test_mode import install_if_requested
+
+    install_if_requested()
     run_server(
         server_name=SERVER_NAME,
         server_version=SERVER_VERSION,
