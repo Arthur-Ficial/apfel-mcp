@@ -1,5 +1,10 @@
 # apfel-mcp
 
+[![Version 0.1.2](https://img.shields.io/badge/version-0.1.2-blue)](https://github.com/Arthur-Ficial/apfel-mcp/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Website](https://img.shields.io/badge/web-apfel--mcp.franzai.com-16A34A)](https://apfel-mcp.franzai.com)
+[![#agentswelcome](https://img.shields.io/badge/%23agentswelcome-AI%20contributions%20welcome-0066cc?labelColor=0d1117)](#contributing-new-mcps)
+
 Token-budget-optimized MCP (Model Context Protocol) servers for [apfel](https://github.com/Arthur-Ficial/apfel), the command-line wrapper for Apple's on-device FoundationModels LLM.
 
 apfel's context window is **4096 tokens**. These MCPs are designed from the ground up to produce tiny, useful tool results that fit that budget — not to truncate afterward.
