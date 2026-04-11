@@ -78,18 +78,28 @@ def extract_int(
     args: dict[str, Any],
     primary_keys: tuple[str, ...],
     default: int,
+    exclude_keys: tuple[str, ...] = (),
 ) -> int:
     """Extract an integer argument the model intended to pass.
 
     Tries, in order:
     1. Each key in `primary_keys`.
-    2. Any key in `COUNT_KEYS` that isn't in `primary_keys`.
+    2. Any key in `COUNT_KEYS` that isn't in `primary_keys` or
+       `exclude_keys`.
+
+    `exclude_keys` lets a caller that has TWO int parameters (e.g.
+    search-and-fetch's `results` and `max_chars_per_result`) avoid the
+    fallback picking up a key already claimed by the other parameter.
+    Without this, extracting `max_chars_per_result` would grab the
+    `results` value (since `results` is in COUNT_KEYS), producing
+    very wrong caps.
 
     Accepts int, or string that parses as int. Falls back to `default`
     on missing / malformed / non-int values. A zero or negative value
     also falls back to `default` - a zero count is never what the
     model meant.
     """
+    excluded = frozenset(exclude_keys)
     for key in primary_keys:
         if key in args:
             parsed = _coerce_int(args[key])
@@ -97,7 +107,7 @@ def extract_int(
                 return parsed
 
     for key in COUNT_KEYS:
-        if key in primary_keys:
+        if key in primary_keys or key in excluded:
             continue
         if key in args:
             parsed = _coerce_int(args[key])

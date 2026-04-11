@@ -98,3 +98,22 @@ def test_extract_int_rejects_zero_and_negative():
 
 def test_extract_int_returns_default_on_empty_dict():
     assert extract_int({}, ("max_results",), default=5) == 5
+
+
+def test_extract_int_respects_exclude_keys():
+    """Regression: search_and_fetch has TWO int params.
+
+    Without exclude_keys, extracting `max_chars_per_result` would pick
+    up the `results` value (since `results` is in COUNT_KEYS), which is
+    obviously wrong. `exclude_keys` prevents that cross-contamination.
+    """
+    args = {"query": "x", "results": 2}
+    # Without exclude: would wrongly return 2 as max_chars_per_result.
+    # With exclude=("results",): falls through to default.
+    got = extract_int(
+        args,
+        ("max_chars_per_result", "max_chars"),
+        default=1800,
+        exclude_keys=("results",),
+    )
+    assert got == 1800
