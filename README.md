@@ -109,6 +109,44 @@ npx @modelcontextprotocol/inspector python -m apfel_mcp.ddg_search_server
 npx @modelcontextprotocol/inspector python -m apfel_mcp.search_and_fetch_server
 ```
 
+## Contributing new MCPs
+
+**This repo is open for new apfel-optimized MCPs.** If you have an idea for a token-budget-aware MCP that fits apfel's 4096-token context window, open an issue or a PR. The shared `src/apfel_mcp/common/` module gives you everything you need to build one:
+
+- `common/budget.py` — `truncate_to(text, hard_cap)` enforces hard output caps with a visible truncation suffix.
+- `common/mcp_protocol.py` — `run_server(...)` is the shared JSON-RPC 2.0 stdio dispatcher. Your entry point is ~30 lines.
+- `common/arg_tolerance.py` — `extract_string(args, keys)` and `extract_int(args, keys, default)` absorb the 3B model's argument-key hallucinations so your tool never returns a "missing argument" error that a reasonable human would have understood.
+- `common/fetch.py` — if you need an HTTP client, use this one: SSRF blocklist, 2 MB download cap, 10-second timeout, honest User-Agent, Readability extraction.
+
+### Ideas we'd love to see
+
+These don't exist yet. All welcome as issues or PRs. Each one should land with tests, a hard token cap, and honest documentation of its limits.
+
+| Tool | What it does | Why apfel needs it |
+|---|---|---|
+| `apfel-mcp-sqlite-query` | Read-only SQL query against a local SQLite file, result count capped | Ask apfel questions about local data without uploading it anywhere |
+| `apfel-mcp-git` | Recent commits, file blame, branch info, read-only | Let apfel explain your repo history from the command line |
+| `apfel-mcp-man` | Fetch a section of a man page or built-in help text | Turn `man ls` into a conversation |
+| `apfel-mcp-fs` | Bounded slice of a local file with path allowlist and byte cap | Read code/config files into apfel without pasting them |
+| `apfel-mcp-datetime` | Current date, timezone conversion, relative date parsing | Fix the "3B model doesn't know today's date" problem |
+| `apfel-mcp-shell` | Allowlisted read-only shell commands (`df`, `uname`, `uptime`, `ps`) | Let apfel diagnose the machine it runs on |
+| `apfel-mcp-clipboard` | Read the current macOS pasteboard (with an always-on privacy warning) | "Summarize what I just copied" |
+| `apfel-mcp-screenshot-ocr` | Capture a region of screen and OCR it via Apple Vision | Bridge what's on-screen into the chat |
+| `apfel-mcp-brew` | Read-only wrapper over `brew info`, `brew list`, `brew outdated` | Answer "what do I have installed, what's outdated" |
+
+### Contribution rules
+
+1. **Token budget first.** Pick a hard cap *before* writing code. 2000-6000 chars is the sweet spot for apfel.
+2. **Test-driven.** Write failing tests before the implementation. Mock all network and subprocess calls. Existing tests in `tests/` are the pattern.
+3. **Use `common/`.** Reuse `budget.truncate_to`, `mcp_protocol.run_server`, `arg_tolerance.extract_string`. Don't reinvent.
+4. **Honest limits.** Document exactly where the MCP stops being useful - in the tool description the model sees, and in the README.
+5. **One tool, one purpose.** Don't build multi-tool mega-servers. Compound tools are the exception: they exist to save tool-call round-trips, not to add features.
+6. **No persistence.** In-memory caches are fine. SQLite databases, filesystem state, and long-lived daemons are not.
+7. **Read-only by default.** Any MCP that can modify user state (files, clipboard, shell) needs an explicit opt-in flag and a very loud README warning.
+8. **Ship it as `src/apfel_mcp/<name>_server.py`** with a console-script entry in `pyproject.toml`. Homebrew formula updates are part of the PR.
+
+If you're not sure whether your idea fits, **open an issue first** and we'll talk about scope. Small, focused, honest. That's the bar.
+
 ## License
 
 [MIT](LICENSE). Built for [apfel](https://github.com/Arthur-Ficial/apfel).

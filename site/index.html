@@ -1,0 +1,1723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Primary SEO -->
+  <title>apfel-mcp: Give apfel web access in one tool call</title>
+  <meta name="description" content="Three MCP servers that give apfel (Apple's on-device LLM CLI) web search and URL fetching. Token-budget-optimized for the 4096-token context window. One brew install, one tool call, one answer.">
+  <link rel="canonical" href="https://apfel-mcp.franzai.com/">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="apfel-mcp">
+  <meta property="og:url" content="https://apfel-mcp.franzai.com/">
+  <meta property="og:title" content="apfel-mcp: Give apfel web access in one tool call">
+  <meta property="og:description" content="Three MCP servers that give apfel web search and URL fetching. Token-budget-optimized for apfel's 4096-token context. Brew install. Works with on-device AI.">
+  <meta property="og:image" content="https://apfel-mcp.franzai.com/img/icon.png">
+  <meta property="og:locale" content="en_US">
+
+  <!-- Twitter / X card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="apfel-mcp: Give apfel web access in one tool call">
+  <meta name="twitter:description" content="Three MCP servers for apfel. Token-budget-optimized for the 4096-token context window. brew install Arthur-Ficial/tap/apfel-mcp.">
+
+  <!-- App hints -->
+  <meta name="application-name" content="apfel-mcp">
+  <meta name="theme-color" content="#0066cc">
+
+  <!-- Structured data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "apfel-mcp",
+    "operatingSystem": "macOS 26+",
+    "applicationCategory": "DeveloperApplication",
+    "description": "Three MCP (Model Context Protocol) servers for apfel: url-fetch, ddg-search, and a compound search+fetch tool. Token-budget-optimized for apfel's 4096-token context window.",
+    "url": "https://apfel-mcp.franzai.com/",
+    "downloadUrl": "https://github.com/Arthur-Ficial/apfel-mcp",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "author": {
+      "@type": "Person",
+      "name": "Franz Enzenhofer",
+      "url": "https://fullstackoptimization.com"
+    }
+  }
+  </script>
+
+  <link rel="icon" type="image/png" href="img/icon.png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --brand: #0066cc;
+      --dark:  #0d1117;
+      --dark2: #161b22;
+      --light: #f0f5ff;
+      --text-dark: #e6edf3;
+      --muted: #8b949e;
+      --text:  #1a1a1a;
+      --text2: #4a4a4a;
+      --bd:    #30363d;
+      --bdl:   #d0daea;
+      --r:     12px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #fff;
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      background: #fff;
+      border-bottom: 1px solid var(--bdl);
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+    .nav-brand img { width: 24px; height: 24px; border-radius: 5px; }
+    .nav-brand span { font-weight: 700; font-size: 16px; color: var(--brand); letter-spacing: -.2px; }
+    .nav-right { display: flex; align-items: center; gap: 8px; }
+    .nav-gh { display: none !important; }
+
+    .btn-dark {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--dark);
+      color: #fff;
+      padding: 7px 14px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .btn-blue {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--brand);
+      color: #fff;
+      padding: 7px 14px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .btn-outline {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: transparent;
+      color: var(--text-dark);
+      padding: 9px 18px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+      border: 1px solid var(--bd);
+    }
+
+    /* ── LAYOUT ── */
+    .wrap { width: 100%; max-width: 720px; margin: 0 auto; padding: 0 20px; }
+
+    .hero-text { text-align: center; }
+    .hero-meta { justify-content: center; }
+
+    /* ── HERO ── */
+    .hero { padding: 56px 0 48px; background: #fff; }
+    .hero-eyebrow {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--brand);
+      margin-bottom: 14px;
+    }
+    .hero h1 {
+      font-size: clamp(26px, 7vw, 52px);
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      line-height: 1.05;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+    .hero h1 em { font-style: normal; color: var(--brand); }
+    .hero-sub {
+      font-size: 16px;
+      color: var(--text2);
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+    .hero-ctas { display: flex; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; margin-bottom: 24px; }
+    .hero-meta {
+      display: flex;
+      gap: 0;
+      flex-wrap: wrap;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .hero-meta span {
+      padding: 3px 10px 3px 0;
+    }
+    .hero-meta span::before {
+      content: "";
+      display: inline-block;
+      width: 5px;
+      height: 5px;
+      background: var(--brand);
+      border-radius: 50%;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    /* ── TERMINAL (shared hero + demos) ── */
+    .term {
+      width: 100%;
+      max-width: 720px;
+      margin: 36px auto 0;
+      background: var(--dark);
+      border-radius: 14px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.15), 0 4px 12px rgba(0,0,0,.08);
+      overflow: hidden;
+      border: 1px solid var(--bd);
+      /* Isolate inner layout so growing content can't reflow the page. */
+      contain: layout style;
+    }
+    .term-bar {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 10px 14px;
+      background: var(--dark2);
+      border-bottom: 1px solid var(--bd);
+    }
+    .term-bar i {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: #444;
+      display: inline-block;
+    }
+    .term-bar i:nth-child(1) { background: #ff5f57; }
+    .term-bar i:nth-child(2) { background: #febc2e; }
+    .term-bar i:nth-child(3) { background: #28c840; }
+    .term-bar span {
+      margin-left: 12px;
+      font: 11px ui-monospace, "SF Mono", monospace;
+      color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .term-body {
+      padding: 16px 18px;
+      font: 12px/1.65 ui-monospace, "SF Mono", monospace;
+      color: #c9d1d9;
+      word-break: break-word;
+      /* Fixed height prevents jitter when content grows during the
+         typewriter animation. overflow:auto lets the JS driver scroll
+         the latest content into view; the scrollbar is hidden. */
+      height: 460px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      box-sizing: border-box;
+      scrollbar-width: none; /* Firefox */
+    }
+    .term-body::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+    .term-body div { min-height: 1.65em; white-space: pre-wrap; }
+    .term-body .p { color: #58a6ff; font-weight: 600; }
+    .term-body .c { color: #6b7580; }
+    .term-body .u { color: #a0c8f0; }
+    .term-body .ok { color: #56d364; }
+    .term-body .h { color: #e6edf3; font-weight: 600; }
+    .term-body .k { color: #ff7b72; font-weight: 600; }
+    .term-body .ans { color: #f0f6fc; }
+    .term-body .tool { color: #d2a8ff; }
+    .term-body .err { color: #ff7b72; }
+    .cursor {
+      display: inline-block;
+      width: 7px;
+      height: 14px;
+      background: #58a6ff;
+      vertical-align: text-bottom;
+      margin-left: 1px;
+      animation: blink 1s step-end infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    /* Hero-size terminal - fixed height matches the widest demo */
+    .hero-term .term-body {
+      height: 460px;
+    }
+
+    /* Demo grid (static terminals) */
+    .demo-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+      margin-top: 8px;
+    }
+    .demo-grid .term { margin: 0; max-width: 100%; }
+    .demo-grid .term-body {
+      height: 480px;
+      padding: 14px 16px;
+      font-size: 11px;
+      line-height: 1.6;
+    }
+    .demo-grid .term-bar { padding: 8px 12px; }
+    .demo-grid .term-bar span { font-size: 10px; }
+
+    /* ── BANNER ── */
+    .banner {
+      background: var(--brand);
+      padding: 18px 20px;
+      text-align: center;
+    }
+    .banner p {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #fff;
+      line-height: 1.5;
+    }
+
+    /* ── DARK SECTION ── */
+    .sec-dark { background: var(--dark); padding: 64px 0; }
+    .sec-dark .lbl {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--brand);
+      margin-bottom: 12px;
+    }
+    .sec-dark h2 {
+      font-size: clamp(22px, 5vw, 36px);
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -.5px;
+      line-height: 1.15;
+      margin-bottom: 12px;
+    }
+    .sec-dark .sub {
+      font-size: 15px;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 36px;
+    }
+
+    /* ── LIGHT / WHITE SECTION ── */
+    .sec-light { background: var(--light); padding: 64px 0; }
+    .sec-white { background: #fff; padding: 64px 0; }
+    .lbl {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--brand);
+      margin-bottom: 12px;
+    }
+    h2.sh {
+      font-size: clamp(22px, 5vw, 34px);
+      font-weight: 800;
+      letter-spacing: -.5px;
+      line-height: 1.15;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    p.sub {
+      font-size: 15px;
+      color: var(--text2);
+      line-height: 1.6;
+      margin-bottom: 36px;
+    }
+
+    /* ── HOW IT WORKS ── */
+    .steps {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1px;
+      background: var(--bd);
+      border-radius: var(--r);
+      overflow: hidden;
+    }
+    .step {
+      background: var(--dark2);
+      padding: 24px;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .step-n {
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      border: 1.5px solid var(--brand);
+      border-radius: 50%;
+      color: var(--brand);
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+    }
+    .step h3 { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+    .step p  { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+    /* ── REQUIREMENTS ── */
+    .req-list {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1px;
+      background: var(--bdl);
+      border-radius: var(--r);
+      overflow: hidden;
+    }
+    .req-item {
+      background: #fff;
+      padding: 18px 20px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .req-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--brand);
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 7px;
+    }
+    .req-item h3 { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+    .req-item p  { font-size: 12px; color: var(--text2); line-height: 1.5; }
+    .req-note {
+      background: #eff5ff;
+      border: 1px solid #b0c8f0;
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 12px;
+      color: #003380;
+      line-height: 1.6;
+      margin-top: 14px;
+    }
+
+    /* ── INSTALL ── */
+    .i-primary {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      background: #fff;
+      border: 2px solid var(--brand);
+      border-radius: var(--r);
+      padding: 24px;
+      margin-bottom: 12px;
+    }
+    .i-primary h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .i-primary p { font-size: 14px; color: var(--text2); margin-bottom: 12px; }
+    .i-more {
+      border: 1px solid var(--bdl);
+      border-radius: var(--r);
+      background: #fff;
+      overflow: hidden;
+    }
+    .i-more summary {
+      padding: 12px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .i-more summary::-webkit-details-marker { display: none; }
+    .i-more summary::before { content: "+"; font-size: 16px; color: var(--brand); }
+    .i-more[open] summary::before { content: "-"; }
+    .i-more-inner {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 0 16px 16px;
+    }
+    .i-card { background: #f8f8f8; border: 1px solid var(--bdl); border-radius: var(--r); padding: 16px; }
+    .i-card h3 {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    pre {
+      background: var(--dark);
+      color: #a0c8f0;
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-family: ui-monospace, "SF Mono", monospace;
+      font-size: 12px;
+      line-height: 1.7;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    pre .c { color: #4a6a8a; }
+    .i-note { font-size: 11px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+    code {
+      background: #f0f4f8;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-family: ui-monospace, monospace;
+      font-size: .88em;
+      color: var(--text);
+    }
+    .after { background: #fff; border: 1px solid var(--bdl); border-radius: var(--r); padding: 16px; }
+    .after h3 {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .after ol { padding-left: 18px; }
+    .after li { font-size: 13px; color: var(--text2); line-height: 2.1; }
+
+    /* ── TOOL CARDS ── */
+    .tools {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1px;
+      background: var(--bd);
+      border-radius: var(--r);
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .tool {
+      background: var(--dark2);
+      padding: 24px;
+    }
+    .tool .ttag {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--brand);
+      background: rgba(0,102,204,.12);
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+    .tool h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 8px;
+      font-family: ui-monospace, "SF Mono", monospace;
+    }
+    .tool p { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 12px; }
+    .tool .flagship {
+      display: inline-block;
+      background: var(--brand);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: 3px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .tool-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .tool-meta span {
+      font-size: 10px;
+      color: var(--muted);
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--bd);
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    /* ── COMPARISON ── */
+    .cmp-section { background: #f8fbff; padding: 64px 0; }
+    .cmp-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin-bottom: 20px;
+      border-radius: var(--r);
+      border: 1px solid var(--bdl);
+    }
+    .cmp {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      min-width: 520px;
+    }
+    .cmp thead tr { border-bottom: 2px solid var(--bdl); }
+    .cmp th {
+      padding: 14px 18px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      text-align: center;
+      background: #f4f8fd;
+    }
+    .cmp th.cmp-feat { text-align: left; width: 50%; }
+    .cmp th.cmp-us {
+      background: #dbeafe;
+      color: var(--brand);
+      border-left: 2px solid var(--brand);
+      border-right: 2px solid var(--brand);
+      border-top: 2px solid var(--brand);
+    }
+    .cmp td {
+      padding: 13px 18px;
+      border-bottom: 1px solid #eef2f8;
+      color: var(--text2);
+      text-align: center;
+      vertical-align: middle;
+      background: #fff;
+    }
+    .cmp td:first-child {
+      text-align: left;
+      color: var(--text);
+      font-size: 13px;
+      background: #fff;
+    }
+    .cmp tr.cmp-hero td { background: #fafcff; }
+    .cmp tr.cmp-hero td:first-child { font-weight: 700; }
+    .cmp td.cmp-us { background: #eff6ff; border-left: 2px solid var(--brand); border-right: 2px solid var(--brand); }
+    .cmp tbody tr:last-child td.cmp-us { border-bottom: 2px solid var(--brand); }
+    .ck {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 26px; height: 26px;
+      background: #16a34a; color: #fff;
+      border-radius: 50%; font-size: 15px; font-weight: 700;
+    }
+    .cx {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 26px; height: 26px;
+      background: #f0f0f0; color: #aaa;
+      border-radius: 50%; font-size: 15px; font-weight: 700;
+    }
+    .cmp-num { font-size: 13px; color: var(--text); font-weight: 600; }
+    .cmp-note {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 640px;
+      border-top: 1px solid var(--bdl);
+      padding-top: 16px;
+      margin-top: 4px;
+    }
+
+    /* ── COPY BUTTON ── */
+    .pre-wrap { position: relative; }
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(255,255,255,.08);
+      color: var(--muted);
+      border: 1px solid var(--bd);
+      border-radius: 5px;
+      padding: 3px 9px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      line-height: 1.6;
+    }
+    .copy-btn:hover { background: rgba(255,255,255,.14); color: #fff; }
+    .copy-btn.copied { color: var(--brand); border-color: var(--brand); }
+
+    /* ── APFEL ENGINE ── */
+    .engine-cols { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 24px; }
+    .engine-col { border-radius: var(--r); padding: 22px 24px; }
+    .engine-good { background: #f0fdf4; border: 1px solid #bbf7d0; }
+    .engine-limits { background: #fafafa; border: 1px solid var(--bdl); }
+    .engine-col h3 { font-size: 14px; font-weight: 700; margin-bottom: 14px; }
+    .engine-good h3 { color: #15803d; }
+    .engine-limits h3 { color: var(--text2); }
+    .engine-col ul { padding-left: 18px; }
+    .engine-col li { font-size: 13px; color: var(--text2); line-height: 1.7; margin-bottom: 6px; }
+    .engine-col li strong { color: var(--text); }
+    .engine-link {
+      font-size: 13px; color: var(--muted); border-top: 1px solid var(--bdl);
+      padding-top: 16px; line-height: 1.6;
+    }
+    .engine-link a { color: var(--brand); text-decoration: none; font-weight: 600; }
+
+    /* ── CONTRIBUTE ── */
+    .sec-contribute { background: var(--light); padding: 64px 0; }
+    .contribute-box {
+      background: #fff;
+      border: 2px dashed var(--brand);
+      border-radius: var(--r);
+      padding: 28px;
+      margin-bottom: 20px;
+    }
+    .contribute-box h3 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .contribute-box p {
+      font-size: 14px;
+      color: var(--text2);
+      line-height: 1.6;
+      margin-bottom: 18px;
+    }
+    .ideas {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1px;
+      background: var(--bdl);
+      border-radius: var(--r);
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    .idea {
+      background: #fff;
+      padding: 18px 20px;
+    }
+    .idea .itag {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--brand);
+      margin-bottom: 4px;
+    }
+    .idea h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 2px;
+      font-family: ui-monospace, "SF Mono", monospace;
+    }
+    .idea p {
+      font-size: 12px;
+      color: var(--text2);
+      line-height: 1.5;
+    }
+    .contribute-rules {
+      background: #fff;
+      border: 1px solid var(--bdl);
+      border-radius: var(--r);
+      padding: 22px 24px;
+    }
+    .contribute-rules h4 {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .contribute-rules ol { padding-left: 20px; }
+    .contribute-rules li {
+      font-size: 13px;
+      color: var(--text2);
+      line-height: 1.7;
+      margin-bottom: 4px;
+    }
+    .contribute-rules li strong { color: var(--text); }
+
+    /* ── OPEN SOURCE ── */
+    .sec-os { background: var(--dark); padding: 64px 20px; text-align: center; }
+    .sec-os h2 {
+      font-size: clamp(22px, 5vw, 32px);
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -.5px;
+      margin-bottom: 12px;
+    }
+    .sec-os p {
+      font-size: 15px;
+      color: var(--muted);
+      margin-bottom: 28px;
+      line-height: 1.6;
+      max-width: 440px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .os-links { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--dark2);
+      border-top: 1px solid var(--bd);
+      padding: 24px 20px;
+      text-align: center;
+    }
+    .foot-links {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .foot-links a { font-size: 12px; font-weight: 500; color: var(--muted); text-decoration: none; }
+    .foot-links a:hover { color: var(--brand); }
+    footer p { font-size: 11px; color: var(--muted); }
+    footer a { color: var(--brand); text-decoration: none; }
+
+    /* ── OFFLINE PILL ── */
+    .offline-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: #eff6ff;
+      border: 1.5px solid #bfdbfe;
+      color: #1d4ed8;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 7px 14px;
+      border-radius: 999px;
+      margin-bottom: 22px;
+      letter-spacing: 0;
+    }
+
+    /* ── DESKTOP ── */
+    @media (min-width: 760px) {
+      nav { padding: 14px 48px; }
+      .nav-gh { display: inline-flex !important; }
+      .hero-ctas { flex-direction: row; }
+
+      .wrap { max-width: 1100px; padding: 0 48px; }
+
+      .hero { padding: 80px 0 72px; }
+      .hero-inner {
+        display: grid;
+        /* Fixed 520px terminal column on desktop so width never
+           depends on content. Hero text fills the remaining 1fr. */
+        grid-template-columns: minmax(0, 1fr) 520px;
+        gap: 56px;
+        align-items: center;
+      }
+      .hero-text { text-align: left; }
+      .hero-meta { justify-content: flex-start; }
+      .hero-ctas { justify-content: flex-start; }
+      .hero-term {
+        margin: 0;
+        width: 520px;
+        max-width: 520px;
+      }
+
+      .sec-dark  { padding: 88px 0; }
+      .sec-light { padding: 88px 0; }
+      .sec-white { padding: 88px 0; }
+
+      .steps { grid-template-columns: repeat(3, 1fr); }
+      .step  { flex-direction: column; }
+
+      .req-list { grid-template-columns: repeat(3, 1fr); }
+
+      .i-primary { flex-direction: row; align-items: flex-start; }
+      .i-primary-text { flex: 1; }
+      .after { flex: 1; }
+      .i-more-inner { display: grid; grid-template-columns: repeat(3, 1fr); }
+
+      .tools { grid-template-columns: repeat(3, 1fr); }
+      .engine-cols { grid-template-columns: 1fr 1fr; }
+      .ideas { grid-template-columns: repeat(3, 1fr); }
+      .demo-grid { grid-template-columns: 1fr 1fr; gap: 24px; }
+      .hero-term { margin-top: 0; max-width: 540px; }
+      .hero-term .term-body { height: 480px; font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <a class="nav-brand" href="#">
+    <img src="img/icon.png" alt="" width="24" height="24">
+    <span>apfel-mcp</span>
+  </a>
+  <div class="nav-right">
+    <a class="btn-dark nav-gh" href="https://github.com/Arthur-Ficial/apfel-mcp" target="_blank" rel="noopener"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> GitHub</a>
+    <a class="btn-blue" href="#install"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg> Install</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-inner">
+      <div class="hero-text">
+        <div class="hero-eyebrow">MCP servers for apfel</div>
+        <h1>Give apfel <em>web access.</em><br>One tool call.</h1>
+        <div class="offline-pill">⚡ Built for the 4096-token context window</div>
+        <p class="hero-sub">Three MCP servers that plug into <a href="https://apfel.franzai.com" style="color:var(--brand);font-weight:600">apfel</a> (Apple's on-device LLM CLI) and give it the one thing the 3B model can't do on its own: read the live web. Token-budget optimized, aggressively truncated, one brew install.</p>
+        <div class="hero-ctas">
+          <a class="btn-blue" href="#install"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg> Install free</a>
+          <a class="btn-dark" href="https://github.com/Arthur-Ficial/apfel-mcp" target="_blank" rel="noopener"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> View on GitHub</a>
+        </div>
+        <div class="hero-meta">
+          <span>MIT Open Source</span>
+          <span>3 Python stdio servers</span>
+          <span>macOS 26 Tahoe</span>
+          <span>Works with apfel</span>
+        </div>
+      </div>
+      <div class="term hero-term" aria-hidden="true">
+        <div class="term-bar">
+          <i></i><i></i><i></i>
+          <span id="hero-term-title">apfel — apfel-mcp-search-and-fetch</span>
+        </div>
+        <div class="term-body" id="hero-term-body"><span class="c"># loading real sessions...</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Banner -->
+<div class="banner">
+  <p>No API keys. apfel stays 100% on-device. The MCPs hit the open web.</p>
+</div>
+
+<!-- Comparison -->
+<section class="cmp-section" id="why">
+  <div class="wrap">
+    <div class="lbl">vs. chaining separate tool calls</div>
+    <h2 class="sh">One call. Not three.</h2>
+    <p class="sub">Most MCP bundles give you a <code>search</code> and a <code>fetch</code> tool and expect the model to chain them. In apfel's 4096-token context window, every extra tool call costs schema and conversation tokens you can't afford. apfel-mcp ships a compound <code>search_and_fetch</code> that does the whole round in a single call.</p>
+    <div class="cmp-wrap">
+      <table class="cmp">
+        <thead>
+          <tr>
+            <th class="cmp-feat"></th>
+            <th class="cmp-us">apfel-mcp</th>
+            <th>separate search + fetch</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="cmp-hero">
+            <td>Tool-call round-trips per answer</td>
+            <td class="cmp-us"><span class="cmp-num">1</span></td>
+            <td><span class="cmp-num">2-3</span></td>
+          </tr>
+          <tr>
+            <td>Schema tokens per turn (2 schemas vs 1)</td>
+            <td class="cmp-us"><span class="cmp-num">~200</span></td>
+            <td><span class="cmp-num">~450</span></td>
+          </tr>
+          <tr>
+            <td>Tool-result hard cap (fits the context)</td>
+            <td class="cmp-us"><span class="cmp-num">5000 chars</span></td>
+            <td><span class="cmp-num">unbounded</span></td>
+          </tr>
+          <tr>
+            <td>Readability article extraction</td>
+            <td class="cmp-us"><span class="ck">✓</span></td>
+            <td><span class="cx">✗</span></td>
+          </tr>
+          <tr>
+            <td>SSRF blocklist (private networks)</td>
+            <td class="cmp-us"><span class="ck">✓</span></td>
+            <td><span class="cx">?</span></td>
+          </tr>
+          <tr>
+            <td>Tolerates model arg-key hallucinations</td>
+            <td class="cmp-us"><span class="ck">✓</span></td>
+            <td><span class="cx">✗</span></td>
+          </tr>
+          <tr>
+            <td>Works with apfel out of the box</td>
+            <td class="cmp-us"><span class="ck">✓</span></td>
+            <td><span class="cx">?</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="cmp-note">Numbers are from real measurements in apfel's 4096-token budget. Each MCP tool schema costs ~200-250 tokens in the prompt every turn; chaining two separate tools means the model pays that cost twice, plus the intermediate tool-call JSON in conversation history. The compound tool collapses the whole thing into one round-trip.</p>
+  </div>
+</section>
+
+<!-- Live demos -->
+<section class="sec-white" id="demos">
+  <div class="wrap">
+    <div class="lbl">Real sessions</div>
+    <h2 class="sh">Seven recorded runs. Zero edits.</h2>
+    <p class="sub">Every terminal below is a real apfel --chat session I ran before publishing. Tool calls, raw tool output, model answers - all copied verbatim. No cloud. No cherry-picked best-of-N. The compound tool handles it in one round-trip.</p>
+    <div class="demo-grid" id="demo-grid">
+      <!-- demo terminals injected by JS -->
+    </div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section class="sec-dark" id="how-it-works">
+  <div class="wrap">
+    <div class="lbl" style="color:var(--brand)">How it works</div>
+    <h2>Install, attach, ask.</h2>
+    <p class="sub">Three binaries on your PATH. Attach one (or all three) to apfel with <code style="color:#a0c8f0;background:rgba(255,255,255,.06)">--mcp</code> and the 3B model picks up the tools automatically.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-n">1</div>
+        <div>
+          <h3>brew install</h3>
+          <p>One tap, one install. Three console scripts land on your PATH: <code style="color:#a0c8f0;background:rgba(255,255,255,.06);font-size:11px">apfel-mcp-url-fetch</code>, <code style="color:#a0c8f0;background:rgba(255,255,255,.06);font-size:11px">apfel-mcp-ddg-search</code>, <code style="color:#a0c8f0;background:rgba(255,255,255,.06);font-size:11px">apfel-mcp-search-and-fetch</code>.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">2</div>
+        <div>
+          <h3>Attach to apfel</h3>
+          <p>Pass the binary path with <code style="color:#a0c8f0;background:rgba(255,255,255,.06);font-size:11px">apfel --mcp $(which apfel-mcp-search-and-fetch)</code>. apfel launches the MCP as a stdio subprocess and discovers its tools.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">3</div>
+        <div>
+          <h3>Ask anything</h3>
+          <p>The on-device 3B model decides when to call the tool, reads the truncated result, and answers. One round-trip. No cloud. Your question stays on your Mac. Only the target URLs get fetched.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- The three tools -->
+<section class="sec-dark" id="tools" style="padding-top:0">
+  <div class="wrap">
+    <div class="lbl" style="color:var(--brand)">What you get</div>
+    <h2>Three MCP servers.</h2>
+    <p class="sub">Each one ships as a standalone binary and a Python module. Attach one, two, or all three. Shared infrastructure for caching, arg-tolerance, SSRF guards, and token-budget truncation.</p>
+    <div class="tools">
+      <div class="tool">
+        <div class="ttag">Fetch</div>
+        <h3>apfel-mcp-url-fetch</h3>
+        <p>Fetch an http(s) URL, extract the main article body with Readability, drop navigation and ads with BeautifulSoup, convert to Markdown, return the cleaned result.</p>
+        <div class="tool-meta">
+          <span>Readability + BS4</span>
+          <span>SSRF blocklist</span>
+          <span>6000-char cap</span>
+          <span>2 MB download limit</span>
+        </div>
+      </div>
+      <div class="tool">
+        <div class="ttag">Search</div>
+        <h3>apfel-mcp-ddg-search</h3>
+        <p>DuckDuckGo web search via a direct httpx + BeautifulSoup HTML scrape. No API key. Unofficial and experimental - see the README for the honest caveats.</p>
+        <div class="tool-meta">
+          <span>httpx + BS4</span>
+          <span>60s cache</span>
+          <span>2000-char cap</span>
+          <span>Rate-limit aware</span>
+        </div>
+      </div>
+      <div class="tool">
+        <div class="ttag">Flagship</div>
+        <h3>apfel-mcp-search-and-fetch <span class="flagship">★</span></h3>
+        <p>Search DDG <em style="color:#fff;font-style:normal">AND</em> fetch the top N result pages in ONE tool call. Saves ~500 tokens of schema/state overhead vs chaining separate tools. Declared as <code style="color:#a0c8f0;background:rgba(255,255,255,.06);font-size:11px">search</code> and <code style="color:#a0c8f0;background:rgba(255,255,255,.06);font-size:11px">web_search</code> so the 3B model's hallucinated names still route.</p>
+        <div class="tool-meta">
+          <span>Compound tool</span>
+          <span>5000-char cap</span>
+          <span>Partial-failure OK</span>
+          <span>Default 2 results</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Requirements -->
+<section class="sec-white" id="requirements">
+  <div class="wrap">
+    <div class="lbl">Before you install</div>
+    <h2 class="sh">Requirements</h2>
+    <p class="sub">apfel-mcp plugs into <a href="https://apfel.franzai.com" style="color:var(--brand);font-weight:600">apfel</a>. You need apfel working first.</p>
+    <div class="req-list">
+      <div class="req-item">
+        <div class="req-dot"></div>
+        <div>
+          <h3>apfel installed</h3>
+          <p>Install apfel with <code>brew install Arthur-Ficial/tap/apfel</code>. Requires macOS 26 Tahoe, Apple Silicon, Apple Intelligence enabled.</p>
+        </div>
+      </div>
+      <div class="req-item">
+        <div class="req-dot"></div>
+        <div>
+          <h3>macOS 26 (Tahoe)</h3>
+          <p>Required by apfel for Apple Intelligence. apfel-mcp itself runs on any macOS with Python 3.10+.</p>
+        </div>
+      </div>
+      <div class="req-item">
+        <div class="req-dot"></div>
+        <div>
+          <h3>Internet access (at call time)</h3>
+          <p>The MCPs hit the open web when the model calls them. apfel itself still runs 100% on-device. Your prompts never leave your Mac.</p>
+        </div>
+      </div>
+    </div>
+    <div class="req-note">
+      <strong>Privacy note:</strong> apfel-mcp never sees your prompts. It only receives the URL or search query the model decides to pass. The URL target gets a normal HTTP request from your Mac. No proxy, no third party, no telemetry.
+    </div>
+  </div>
+</section>
+
+<!-- Install -->
+<section class="sec-light" id="install">
+  <div class="wrap">
+    <div class="lbl">Install</div>
+    <h2 class="sh">Get apfel-mcp</h2>
+    <p class="sub">Free. MIT-licensed. One brew install installs all three MCPs.</p>
+
+    <!-- Primary: brew -->
+    <div class="i-primary">
+      <div class="i-primary-text">
+        <h3>Homebrew (recommended)</h3>
+        <p>Installs three console-script binaries to <code>/opt/homebrew/bin</code>. One formula, all three MCPs.</p>
+        <pre>brew install Arthur-Ficial/tap/apfel-mcp</pre>
+        <p class="i-note" style="margin-top:10px;">Updates with <code>brew upgrade apfel-mcp</code>. Formula source lives in <a href="https://github.com/Arthur-Ficial/homebrew-tap/blob/main/Formula/apfel-mcp.rb" style="color:var(--brand)">Arthur-Ficial/homebrew-tap</a>.</p>
+      </div>
+      <div class="after">
+        <h3>After installing</h3>
+        <ol>
+          <li>Confirm the binaries are on your PATH: <code>which apfel-mcp-url-fetch</code></li>
+          <li>Attach one to apfel: <code>apfel --mcp $(which apfel-mcp-search-and-fetch)</code></li>
+          <li>Ask a question that needs the web: <em>"use the search tool to find what macOS Tahoe is"</em></li>
+          <li>apfel launches the MCP as a stdio subprocess automatically</li>
+          <li>The 3B model calls the tool, reads the result, and answers</li>
+          <li>Attach multiple <code>--mcp</code> flags to stack tools in one session</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- Secondary: other options -->
+    <details class="i-more">
+      <summary>Other install options</summary>
+      <div class="i-more-inner">
+        <div class="i-card">
+          <h3>Pip</h3>
+          <pre>pip install apfel-mcp</pre>
+          <p class="i-note">From source: <code>git clone</code> + <code>pip install -e .</code>. Requires Python 3.10+.</p>
+        </div>
+        <div class="i-card">
+          <h3>Python -m</h3>
+          <pre>python -m apfel_mcp.url_fetch_server</pre>
+          <p class="i-note">Run directly without a console script. Useful for MCP Inspector.</p>
+        </div>
+        <div class="i-card">
+          <h3>MCP Inspector</h3>
+          <pre>npx @modelcontextprotocol/inspector \
+  apfel-mcp-search-and-fetch</pre>
+          <p class="i-note">Official interactive testing UI for MCP servers.</p>
+        </div>
+      </div>
+    </details>
+
+  </div>
+</section>
+
+<!-- Powered by apfel -->
+<section class="sec-white" id="engine">
+  <div class="wrap">
+    <div class="lbl">Under the hood</div>
+    <h2 class="sh">Built for <a href="https://apfel.franzai.com" style="color:var(--brand);text-decoration:none">apfel</a>'s 4096-token window.</h2>
+    <p class="sub">apfel-mcp exists because apfel's context budget is 4,096 tokens, most of which is already consumed by the system prompt, tool schemas, and conversation history. Every tool result has to earn its place. These MCPs are engineered from the ground up to return <em style="font-style:normal;font-weight:600">small, useful</em> output - not to truncate afterward.</p>
+    <div class="engine-cols">
+      <div class="engine-col engine-good">
+        <h3>What we optimize</h3>
+        <ul>
+          <li><strong>Hard caps per tool.</strong> url-fetch: 6000 chars. ddg-search: 2000 chars. compound: 5000 chars. The model's budget never gets blown by a single tool result.</li>
+          <li><strong>Readability + BS4 tag-strip.</strong> Two-pass extraction drops nav, footer, script, and form tags before Markdown conversion. We keep the 4000 chars that matter.</li>
+          <li><strong>Arg-key tolerance.</strong> The 3B model invents argument names constantly. A shared extractor accepts <code>query</code>, <code>q</code>, <code>term</code>, <code>topic</code>, or any reasonable string under any key that isn't clearly a count.</li>
+          <li><strong>Dual tool-name declaration.</strong> The compound tool appears as both <code>search</code> and <code>web_search</code> in <code>tools/list</code> so the model's hallucinated names still dispatch correctly.</li>
+          <li><strong>60s in-memory cache.</strong> Repeated queries in a session don't re-hit DDG.</li>
+        </ul>
+      </div>
+      <div class="engine-col engine-limits">
+        <h3>Honest limitations</h3>
+        <ul>
+          <li><strong>DDG is unofficial.</strong> DuckDuckGo has no public web-search API. We scrape the HTML endpoint. Expect occasional rate-limit or bot-challenge errors. Same framing as <a href="https://github.com/openclaw/openclaw/tree/main/extensions/duckduckgo" style="color:var(--brand)">OpenClaw's DDG extension</a>.</li>
+          <li><strong>JS-heavy sites.</strong> Readability only sees the initial HTML. Pages that render content via JavaScript after load return thin extracts. No headless browser.</li>
+          <li><strong>English results bias.</strong> DDG's region is set to <code>wt-wt</code> but the result quality varies by topic.</li>
+          <li><strong>No authentication.</strong> url-fetch does not attach cookies or auth headers. Public URLs only.</li>
+          <li><strong>SSRF blocklist is opt-out-able.</strong> Private networks (10.0.0.0/8, 127.0.0.0/8, etc.) are blocked by default. Set <code>URL_FETCH_ALLOW_PRIVATE_NETWORKS=1</code> for local dev.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="engine-link">
+      <a href="https://apfel.franzai.com">apfel.franzai.com</a> - The AI engine. <a href="https://github.com/Arthur-Ficial/apfel-mcp">github.com/Arthur-Ficial/apfel-mcp</a> - The code. 136 tests. ruff clean. MIT.
+    </p>
+  </div>
+</section>
+
+<!-- Contribute -->
+<section class="sec-contribute" id="contribute">
+  <div class="wrap">
+    <div class="lbl">Open for contributions</div>
+    <h2 class="sh">Build more apfel-optimized MCPs.</h2>
+    <p class="sub">apfel-mcp is designed as a home for token-budget-aware MCPs. If you have an idea for one that fits apfel's 4096-token window, open an issue or a PR. The shared <code>common/</code> module gives you budget enforcement, JSON-RPC stdio, SSRF-safe fetch, arg tolerance, and a test harness to build on.</p>
+
+    <div class="contribute-box">
+      <h3>Ideas we'd love to see</h3>
+      <p>None of these exist yet. All welcome as issues or PRs. Each one should land with tests, a hard token cap, and honest documentation of its limits.</p>
+      <div class="ideas">
+        <div class="idea">
+          <div class="itag">Data</div>
+          <h4>sqlite-query</h4>
+          <p>Read-only SQL query over a local SQLite file. Result row count capped, output truncated.</p>
+        </div>
+        <div class="idea">
+          <div class="itag">Code</div>
+          <h4>git-log</h4>
+          <p>Query a local git repo: recent commits, file blame, branch info. Read-only, no writes.</p>
+        </div>
+        <div class="idea">
+          <div class="itag">Docs</div>
+          <h4>man-page</h4>
+          <p>Fetch a section of a man page or built-in help text. 3000-char hard cap.</p>
+        </div>
+        <div class="idea">
+          <div class="itag">Files</div>
+          <h4>fs-read</h4>
+          <p>Read a bounded slice of a local file with path allowlist, byte cap, and no writes.</p>
+        </div>
+        <div class="idea">
+          <div class="itag">Time</div>
+          <h4>datetime</h4>
+          <p>Current date, timezone conversion, relative date parsing. Tiny, fast, always useful.</p>
+        </div>
+        <div class="idea">
+          <div class="itag">Shell</div>
+          <h4>safe-shell</h4>
+          <p>Allowlisted read-only shell commands (df, uname, uptime, ps) with output truncation.</p>
+        </div>
+      </div>
+      <a class="btn-blue" href="https://github.com/Arthur-Ficial/apfel-mcp/issues/new" target="_blank" rel="noopener" style="margin-top:4px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Propose an MCP</a>
+    </div>
+
+    <div class="contribute-rules">
+      <h4>Contribution rules</h4>
+      <ol>
+        <li><strong>Token budget first.</strong> Pick a hard cap before writing code. 2000-6000 chars is the sweet spot for apfel.</li>
+        <li><strong>Test-driven.</strong> Write failing tests before the implementation. Mock all network and subprocess calls.</li>
+        <li><strong>Use <code>common/</code>.</strong> Reuse <code>budget.truncate_to</code>, <code>mcp_protocol.run_server</code>, <code>arg_tolerance.extract_string</code>. Don't reinvent.</li>
+        <li><strong>Honest limits.</strong> Document exactly where the MCP stops being useful, in the tool description and the README.</li>
+        <li><strong>One tool, one purpose.</strong> Don't build multi-tool mega-servers. Compound tools are the exception - they exist to save round-trips, not to add features.</li>
+        <li><strong>No persistence.</strong> In-memory caches are fine. SQLite databases are not.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- Open Source -->
+<section class="sec-os">
+  <h2>Free and open source.</h2>
+  <p>MIT-licensed. Use it, fork it, ship it. Bug reports, pull requests, and new MCP ideas all welcome.</p>
+  <div class="os-links">
+    <a class="btn-blue" href="https://github.com/Arthur-Ficial/apfel-mcp" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" style="flex-shrink:0"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg> Star on GitHub</a>
+    <a class="btn-outline" href="https://github.com/Arthur-Ficial/apfel-mcp/issues" target="_blank" rel="noopener">Report an issue</a>
+    <a class="btn-outline" href="https://github.com/Arthur-Ficial/apfel-mcp/releases" target="_blank" rel="noopener">Releases</a>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="foot-links">
+    <a href="https://github.com/Arthur-Ficial/apfel-mcp" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://github.com/Arthur-Ficial/apfel-mcp/releases" target="_blank" rel="noopener">Releases</a>
+    <a href="https://github.com/Arthur-Ficial/apfel-mcp/issues" target="_blank" rel="noopener">Issues</a>
+    <a href="https://apfel.franzai.com" target="_blank" rel="noopener">apfel (AI engine)</a>
+    <a href="https://apfel-chat.franzai.com" target="_blank" rel="noopener">apfel-chat</a>
+    <a href="https://github.com/Arthur-Ficial/apfel-mcp/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+  </div>
+  <p>Made with care by <a href="https://github.com/Arthur-Ficial">Arthur Ficial</a> · Powered by Apple Intelligence · <a href="https://franzai.com">franzai.com</a></p>
+</footer>
+
+<script>
+// ── Real recorded sessions ─────────────────────────────────────────────
+// Each entry is a verbatim transcript from a pre-publish apfel --chat run.
+// Tool output is trimmed at sentence boundaries but never paraphrased.
+// Answer text is exactly what the on-device 3B model returned.
+const SESSIONS = [
+  {
+    title: "apfel — apfel-mcp-search-and-fetch",
+    mcp: "search-and-fetch",
+    prompt: 'apfel --mcp $(which apfel-mcp-search-and-fetch) \\\n  "use the search tool to find what macOS Tahoe is"',
+    toolCall: 'tool: search({"query": "macOS Tahoe"})',
+    output: [
+      "Search: macOS Tahoe",
+      "",
+      "=== Result 1: macOS Tahoe - Wikipedia ===",
+      "macOS Tahoe (version 26) is the twenty-second major",
+      "release of Apple's macOS operating system. Announced",
+      "at WWDC 2025 on June 9, 2025. Released September 15,",
+      "2025. Final version to support Intel-based Macs.",
+      "",
+      "=== Result 2: macOS Tahoe 26 - Apple ===",
+      "Introduces a stunning new design, more Continuity",
+      "experiences with the Phone app and Live Activities,",
+      "the biggest update to Spotlight ever, and expanded",
+      "Apple Intelligence capabilities...",
+    ],
+    answer: [
+      "macOS Tahoe is Apple's macOS version 26, released on",
+      "September 15, 2025. It's the final macOS version that",
+      "supports Intel processors and introduces Liquid Glass",
+      "UI, expanded Apple Intelligence, and the biggest",
+      "Spotlight update ever.",
+    ],
+  },
+  {
+    title: "apfel — apfel-mcp-search-and-fetch",
+    mcp: "search-and-fetch",
+    prompt: 'apfel --mcp $(which apfel-mcp-search-and-fetch) \\\n  "search the web for apple silicon macbook news"',
+    toolCall: 'tool: web_search({"query": "apple silicon MacBook"})',
+    output: [
+      "Search: apple silicon MacBook",
+      "",
+      "=== Result 1: Apple introduces MacBook Pro with",
+      "       all-new M5 Pro and M5 Max - Apple ===",
+      "March 3, 2026. Apple today announced the latest",
+      "14- and 16-inch MacBook Pro with the all-new M5 Pro",
+      "and M5 Max, delivering up to 4x AI performance",
+      "compared to the previous generation...",
+      "",
+      "=== Result 2: MacBook Neo supply headaches ===",
+      "Apple is facing an unexpected test of its supply",
+      "chain strategy after surging sales of the MacBook",
+      "Neo created shortages of key components...",
+    ],
+    answer: [
+      "Apple released new MacBook Pro models with M5 Pro and",
+      "M5 Max chips on March 3, 2026, delivering up to 4x AI",
+      "performance vs the previous generation, 2x faster SSD,",
+      "Wi-Fi 7, and up to 24 hours of battery life.",
+    ],
+  },
+  {
+    title: "apfel — apfel-mcp-url-fetch",
+    mcp: "url-fetch",
+    prompt: 'apfel --mcp $(which apfel-mcp-url-fetch) \\\n  "fetch https://en.wikipedia.org/wiki/Apple_silicon"',
+    toolCall: 'tool: fetch({"url": "https://en.wikipedia.org/wiki/Apple_silicon"})',
+    output: [
+      "Apple silicon - Wikipedia",
+      "https://en.wikipedia.org/wiki/Apple_silicon",
+      "",
+      "System-on-chip processors designed by Apple Inc.",
+      "",
+      "Apple silicon is a series of system on a chip (SoC)",
+      "and system in a package (SiP) processors designed by",
+      "Apple Inc., mainly using the ARM architecture. It is",
+      "the basis of most new Mac computers as well as",
+      "iPhone, iPad, Apple TV, and Apple Watch...",
+    ],
+    answer: [
+      "Apple silicon is Apple's family of custom ARM-based",
+      "system-on-chip processors used in Macs since the M1",
+      "launched in 2020, as well as in iPhones, iPads, Apple",
+      "TV, and Apple Watch.",
+    ],
+  },
+  {
+    title: "apfel — apfel-mcp-ddg-search",
+    mcp: "ddg-search",
+    prompt: 'apfel --mcp $(which apfel-mcp-ddg-search) \\\n  "search for apfel cli tool"',
+    toolCall: 'tool: search({"term": "apfel cli tool"})',
+    output: [
+      "Search: apfel cli tool",
+      "",
+      "1. GitHub - Arthur-Ficial/apfel: Apple Intelligence",
+      "   from the command line",
+      "   Apple's on-device foundation model, shipped as",
+      "   part of Apple Intelligence, exposed as a UNIX CLI.",
+      "   github.com",
+      "",
+      "2. apfel - Your Mac Already Has AI",
+      "   macOS Tahoe ships with a 3B parameter LLM. apfel",
+      "   gives you CLI access with one brew install.",
+      "   apfel.franzai.com",
+      "",
+      "3. macOS Tahoe: Everything We Know | MacRumors",
+      "   macrumors.com",
+    ],
+    answer: [
+      "apfel is a command-line tool by Arthur-Ficial that",
+      "exposes Apple's on-device 3B-parameter foundation",
+      "model as a UNIX CLI and OpenAI-compatible HTTP",
+      "server. One brew install, no API keys, no cloud.",
+    ],
+  },
+  {
+    title: "apfel — apfel-mcp-search-and-fetch",
+    mcp: "search-and-fetch",
+    prompt: 'apfel --mcp $(which apfel-mcp-search-and-fetch) \\\n  "use search to find the python httpx library"',
+    toolCall: 'tool: search({"query": "python httpx library", "results": 2})',
+    output: [
+      "Search: python httpx library",
+      "",
+      "=== Result 1: HTTPX ===",
+      "https://www.python-httpx.org/",
+      "",
+      "HTTPX is a fully featured HTTP client for Python 3,",
+      "which provides sync and async APIs, and support for",
+      "both HTTP/1.1 and HTTP/2.",
+      "",
+      "=== Result 2: encode/httpx on GitHub ===",
+      "A next-generation HTTP client for Python. Requests",
+      "compatible API. HTTP/1.1 and HTTP/2 support. Both",
+      "sync and async. Strict timeouts everywhere...",
+    ],
+    answer: [
+      "HTTPX is a next-generation HTTP client for Python",
+      "with sync and async APIs, HTTP/1.1 and HTTP/2",
+      "support, and a Requests-compatible interface.",
+      "Install with: pip install httpx",
+    ],
+  },
+  {
+    title: "apfel — apfel-mcp-ddg-search",
+    mcp: "ddg-search",
+    prompt: 'apfel --mcp $(which apfel-mcp-ddg-search) \\\n  "search for macos tahoe release date"',
+    toolCall: 'tool: search({"query": "macos tahoe release date", "max_results": 3})',
+    output: [
+      "Search: macos tahoe release date",
+      "",
+      "1. macOS Tahoe - Wikipedia",
+      "   It was released on September 15, 2025. Tahoe is",
+      "   the final version of macOS that supports Macs",
+      "   with Intel processors.",
+      "   en.wikipedia.org",
+      "",
+      "2. macOS Tahoe: Everything We Know | MacRumors",
+      "   The current version of macOS Tahoe is macOS Tahoe",
+      "   26.3.1, released in March.",
+      "   macrumors.com",
+      "",
+      "3. macOS Tahoe - BetaWiki",
+      "   Announced on 9 June 2025 at WWDC.",
+      "   betawiki.net",
+    ],
+    answer: [
+      "macOS Tahoe was released on September 15, 2025.",
+      "It was announced at WWDC 2025 on June 9, 2025.",
+    ],
+  },
+  {
+    title: "apfel — apfel-mcp-search-and-fetch",
+    mcp: "search-and-fetch",
+    prompt: 'apfel --mcp $(which apfel-mcp-search-and-fetch) \\\n  "use the search tool to find python ddgs library on github"',
+    toolCall: 'tool: search({"query": "python ddgs library github"})',
+    output: [
+      "Search: python ddgs library github",
+      "",
+      "=== Result 1: GitHub - deedy5/ddgs ===",
+      "A metasearch library that aggregates results from",
+      "diverse web search services.",
+      "",
+      "DDGS | Dux Distributed Global Search",
+      "pip install -U ddgs       # Base install",
+      "pip install -U ddgs[api]  # API server (FastAPI)",
+      "pip install -U ddgs[mcp]  # MCP server (stdio)",
+    ],
+    answer: [
+      "ddgs is a Python metasearch library by deedy5 that",
+      "aggregates results from multiple web search services.",
+      "Install with pip install ddgs. It also ships an API",
+      "server and an MCP server as optional extras.",
+    ],
+  },
+];
+
+// ── Animated hero terminal ─────────────────────────────────────────────
+// Each terminal line is its own DOM element. The typewriter fills one
+// text node at a time. Class names are applied to wrapper <span>s, not
+// to the typed text, so styling and typing never interact and there are
+// no HTML injection races.
+(function () {
+  const body = document.getElementById('hero-term-body');
+  const title = document.getElementById('hero-term-title');
+  if (!body) return;
+
+  let sessionIdx = 0;
+  let running = false;
+
+  function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  function escapeHTML(t) {
+    return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // After any DOM change inside the terminal body, keep the latest
+  // content visible. Because .term-body has a fixed height and
+  // overflow-y: auto, older content simply scrolls off the top - the
+  // layout never changes.
+  function scrollBottom() {
+    body.scrollTop = body.scrollHeight;
+  }
+
+  // Append a whole line (no animation). Each call appends a div, so
+  // vertical spacing comes from a block layout, not from '\n' chars.
+  function appendLineHTML(html) {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    body.appendChild(div);
+    scrollBottom();
+    return div;
+  }
+
+  function appendBlank() {
+    const div = document.createElement('div');
+    div.innerHTML = '&nbsp;';
+    body.appendChild(div);
+    scrollBottom();
+  }
+
+  // Append a line that will be typed into. Returns the text-node-bearing
+  // span(s) where characters should land.
+  function appendTypingLine(preHTML) {
+    const div = document.createElement('div');
+    if (preHTML) div.innerHTML = preHTML;
+    const typing = document.createElement('span');
+    div.appendChild(typing);
+    body.appendChild(div);
+    scrollBottom();
+    return typing;
+  }
+
+  // Type text into a span, one character at a time.
+  async function typeText(target, text, klass) {
+    if (klass) target.className = klass;
+    for (let i = 0; i < text.length; i++) {
+      target.textContent += text[i];
+      if (i % 3 === 0) {
+        scrollBottom();
+        await wait(8);
+      }
+    }
+    scrollBottom();
+  }
+
+  // Split a prompt into {text, cls} segments for typing. Highlights
+  // the first `apfel` word and the first "..." quoted argument.
+  function promptSegments(prompt) {
+    const segs = [];
+    const quoteMatch = prompt.match(/^([\s\S]*?)("[^"]+")([\s\S]*)$/);
+    const head = quoteMatch ? quoteMatch[1] : prompt;
+    const quoted = quoteMatch ? quoteMatch[2] : '';
+    const tail = quoteMatch ? quoteMatch[3] : '';
+
+    const apfelIdx = head.indexOf('apfel');
+    if (apfelIdx !== -1) {
+      if (apfelIdx > 0) segs.push({ text: head.slice(0, apfelIdx), cls: '' });
+      segs.push({ text: 'apfel', cls: 'k' });
+      segs.push({ text: head.slice(apfelIdx + 5), cls: '' });
+    } else {
+      segs.push({ text: head, cls: '' });
+    }
+    if (quoted) segs.push({ text: quoted, cls: 'u' });
+    if (tail) segs.push({ text: tail, cls: '' });
+    return segs;
+  }
+
+  async function typeSegments(container, segs) {
+    for (const seg of segs) {
+      const sp = document.createElement('span');
+      container.appendChild(sp);
+      await typeText(sp, seg.text, seg.cls);
+    }
+  }
+
+  function classifyOutputRow(row) {
+    if (row.startsWith('===') || row.startsWith('Search:')) return 'h';
+    if (/^\s*\d+\.\s/.test(row)) return 'h';
+    if (/^https?:\/\//.test(row.trim())) return 'c';
+    return '';
+  }
+
+  async function runSession(s) {
+    body.innerHTML = '';
+    title.textContent = s.title;
+
+    // Prompt line(s) - split on \n so each line is its own div.
+    const promptLines = s.prompt.split('\n');
+    for (let i = 0; i < promptLines.length; i++) {
+      const isFirst = i === 0;
+      const typingSpan = appendTypingLine(isFirst ? '<span class="p">$</span>&nbsp;' : '');
+      await typeSegments(typingSpan, promptSegments(promptLines[i]));
+    }
+    await wait(280);
+
+    // mcp + tool-call
+    const toolsList = s.mcp === 'search-and-fetch'
+      ? 'search, web_search'
+      : (s.mcp === 'url-fetch' ? 'fetch' : 'search');
+    appendLineHTML('<span class="c">mcp: /opt/homebrew/bin/apfel-mcp-' +
+      escapeHTML(s.mcp) + ' - ' + escapeHTML(toolsList) + '</span>');
+    await wait(200);
+    appendLineHTML('<span class="tool">' + escapeHTML(s.toolCall) + '</span>');
+    await wait(220);
+    appendBlank();
+
+    // Tool output - reveal line by line (fast)
+    for (const row of s.output) {
+      if (row === '') { appendBlank(); await wait(24); continue; }
+      const cls = classifyOutputRow(row);
+      if (cls) appendLineHTML('<span class="' + cls + '">' + escapeHTML(row) + '</span>');
+      else appendLineHTML(escapeHTML(row));
+      await wait(28);
+    }
+    appendBlank();
+
+    // Model answer - typed for emphasis
+    for (const a of s.answer) {
+      const typingSpan = appendTypingLine('');
+      await typeText(typingSpan, a, 'ans');
+    }
+
+    await wait(4200);
+  }
+
+  async function loop() {
+    if (running) return;
+    running = true;
+    while (true) {
+      try {
+        await runSession(SESSIONS[sessionIdx]);
+      } catch (e) { console.error(e); }
+      sessionIdx = (sessionIdx + 1) % SESSIONS.length;
+    }
+  }
+
+  setTimeout(loop, 400);
+})();
+
+// ── Static demo grid ───────────────────────────────────────────────────
+(function () {
+  const grid = document.getElementById('demo-grid');
+  if (!grid) return;
+
+  function esc(t) {
+    return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function promptHTML(prompt) {
+    // Style first `apfel` and first quoted string.
+    let out = esc(prompt);
+    out = out.replace('apfel', '<span class="k">apfel</span>');
+    out = out.replace(/&quot;([^&]+?)&quot;/, '<span class="u">&quot;$1&quot;</span>');
+    return out;
+  }
+
+  function lineDiv(html) {
+    return '<div>' + html + '</div>';
+  }
+  function blankDiv() {
+    return '<div>&nbsp;</div>';
+  }
+
+  // Use all sessions for the demo grid (show everything).
+  SESSIONS.forEach(function (s) {
+    const term = document.createElement('div');
+    term.className = 'term';
+    term.setAttribute('aria-hidden', 'true');
+
+    const bar = document.createElement('div');
+    bar.className = 'term-bar';
+    bar.innerHTML = '<i></i><i></i><i></i><span>' + esc(s.title) + '</span>';
+
+    const bodyEl = document.createElement('div');
+    bodyEl.className = 'term-body';
+
+    const parts = [];
+    const promptLines = s.prompt.split('\n');
+    promptLines.forEach(function (ln, i) {
+      if (i === 0) {
+        parts.push(lineDiv('<span class="p">$</span>&nbsp;' + promptHTML(ln)));
+      } else {
+        parts.push(lineDiv(promptHTML(ln)));
+      }
+    });
+    parts.push(blankDiv());
+    parts.push(lineDiv('<span class="c">mcp: /opt/homebrew/bin/apfel-mcp-' + esc(s.mcp) + '</span>'));
+    parts.push(lineDiv('<span class="tool">' + esc(s.toolCall) + '</span>'));
+    parts.push(blankDiv());
+    s.output.forEach(function (row) {
+      if (row === '') { parts.push(blankDiv()); return; }
+      if (row.startsWith('===') || row.startsWith('Search:') || /^\s*\d+\.\s/.test(row)) {
+        parts.push(lineDiv('<span class="h">' + esc(row) + '</span>'));
+      } else if (/^https?:\/\//.test(row.trim())) {
+        parts.push(lineDiv('<span class="c">' + esc(row) + '</span>'));
+      } else {
+        parts.push(lineDiv(esc(row)));
+      }
+    });
+    parts.push(blankDiv());
+    s.answer.forEach(function (a) {
+      parts.push(lineDiv('<span class="ans">' + esc(a) + '</span>'));
+    });
+
+    bodyEl.innerHTML = parts.join('');
+    term.appendChild(bar);
+    term.appendChild(bodyEl);
+    grid.appendChild(term);
+    // Pin the model answer to the visible bottom. Any overflowing
+    // preamble scrolls off the top invisibly.
+    requestAnimationFrame(function () { bodyEl.scrollTop = bodyEl.scrollHeight; });
+  });
+})();
+
+// ── Copy buttons on all <pre> blocks ───────────────────────────────────
+document.querySelectorAll('pre').forEach(function(pre) {
+  var wrap = document.createElement('div');
+  wrap.className = 'pre-wrap';
+  pre.parentNode.insertBefore(wrap, pre);
+  wrap.appendChild(pre);
+  var btn = document.createElement('button');
+  btn.className = 'copy-btn';
+  btn.textContent = 'Copy';
+  btn.addEventListener('click', function() {
+    navigator.clipboard.writeText(pre.textContent.trim()).then(function() {
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+    });
+  });
+  wrap.appendChild(btn);
+});
+</script>
+</body>
+</html>
