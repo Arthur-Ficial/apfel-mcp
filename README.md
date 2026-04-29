@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/arthur-ficial-apfel-mcp-badge.png)](https://mseep.ai/app/arthur-ficial-apfel-mcp)
+
 # apfel-mcp
 
 [![Version 0.1.2](https://img.shields.io/badge/version-0.1.2-blue)](https://github.com/Arthur-Ficial/apfel-mcp/releases)
