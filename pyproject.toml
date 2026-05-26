@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "apfel-mcp"
-version = "0.1.2"
-description = "Token-budget-optimized MCP servers for apfel (url-fetch + ddg-search + search-and-fetch)"
+version = "0.2.0"
+description = "Token-budget-optimized MCP servers for apfel (url-fetch + ddg-search + search-and-fetch + fs)"
 readme = "README.md"
 license = { text = "MIT" }
 authors = [
@@ -43,6 +43,7 @@ dev = [
 apfel-mcp-url-fetch = "apfel_mcp.url_fetch_server:main"
 apfel-mcp-ddg-search = "apfel_mcp.ddg_search_server:main"
 apfel-mcp-search-and-fetch = "apfel_mcp.search_and_fetch_server:main"
+apfel-mcp-fs = "apfel_mcp.fs_server:main"
 
 [project.urls]
 Homepage = "https://github.com/Arthur-Ficial/apfel-mcp"

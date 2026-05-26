@@ -6,13 +6,14 @@ Token-budget-optimized MCP servers for [apfel](https://github.com/Arthur-Ficial/
 
 Ship user-facing MCP tools that work when the apfel conversation already has 2000+ tokens of history. Every new MCP here must answer: *"Does this tool result still fit in an already-crowded context?"*
 
-## Three MCPs
+## Four MCPs
 
 | MCP | Binary | Hard cap | Purpose |
 |---|---|---|---|
 | `url-fetch` | `apfel-mcp-url-fetch` | 6000 chars (~1500 tokens) | Readability-based URL → clean markdown |
 | `ddg-search` | `apfel-mcp-ddg-search` | 2000 chars (~500 tokens) | DuckDuckGo search (experimental, scraping) |
 | `search-and-fetch` | `apfel-mcp-search-and-fetch` | 5000 chars (~1250 tokens) | Compound: search + fetch top N in one tool call |
+| `fs` | `apfel-mcp-fs` | 6000 chars (~1500 tokens) | Read-only bounded slice of a local text file, path allowlist |
 
 ## Non-negotiable principles
 
@@ -25,21 +26,23 @@ Ship user-facing MCP tools that work when the apfel conversation already has 200
 
 ## Architecture
 
-One Python package, shared `common/` module, three entry-point scripts:
+One Python package, shared `common/` module, four entry-point scripts:
 
 ```
 src/apfel_mcp/
 ├── common/
-│   ├── mcp_protocol.py      # stdio JSON-RPC dispatcher (reused by all three servers)
+│   ├── mcp_protocol.py      # stdio JSON-RPC dispatcher (reused by all servers)
 │   ├── fetch.py             # httpx + readability-lxml + markdownify + SSRF guards
 │   ├── search.py            # ddgs wrapper + 60s in-memory cache + format
+│   ├── fs.py                # path-allowlist + bounded read-only file slice
 │   └── budget.py            # hard-cap enforcement + truncation suffix
 ├── url_fetch_server.py      # `apfel-mcp-url-fetch` main()
 ├── ddg_search_server.py     # `apfel-mcp-ddg-search` main()
-└── search_and_fetch_server.py  # `apfel-mcp-search-and-fetch` main()
+├── search_and_fetch_server.py  # `apfel-mcp-search-and-fetch` main()
+└── fs_server.py             # `apfel-mcp-fs` main()
 ```
 
-The three entry-point scripts are **thin wrappers** (~80-100 lines each). All the logic lives in `common/`. New MCPs added here should follow the same pattern: implement logic in `common/`, add a one-file entry-point.
+The four entry-point scripts are **thin wrappers** (~80-100 lines each). All the logic lives in `common/`. New MCPs added here should follow the same pattern: implement logic in `common/`, add a one-file entry-point.
 
 ## Build & Test
 

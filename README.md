@@ -1,6 +1,6 @@
 # apfel-mcp
 
-[![Version 0.1.2](https://img.shields.io/badge/version-0.1.2-blue)](https://github.com/Arthur-Ficial/apfel-mcp/releases)
+[![Version 0.2.0](https://img.shields.io/badge/version-0.2.0-blue)](https://github.com/Arthur-Ficial/apfel-mcp/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Website](https://img.shields.io/badge/web-apfel--mcp.franzai.com-16A34A)](https://apfel-mcp.franzai.com)
 [![#agentswelcome](https://img.shields.io/badge/%23agentswelcome-PRs%20welcome-0066cc?style=for-the-badge&labelColor=0d1117&logo=probot&logoColor=white)](#contributing-new-mcps)
@@ -9,11 +9,12 @@ Token-budget-optimized MCP (Model Context Protocol) servers for [apfel](https://
 
 apfel's context window is **4096 tokens**. These MCPs are designed from the ground up to produce tiny, useful tool results that fit that budget — not to truncate afterward.
 
-## The three MCPs
+## The four MCPs
 
 - **`apfel-mcp-url-fetch`** — fetch a web page, extract the main article body via Readability, return clean markdown. Default ~4000 chars, hard cap 6000 chars (~1500 tokens). SSRF guards: `http`/`https` only, private-network blocklist, 10-second timeout, 2 MB download cap.
 - **`apfel-mcp-ddg-search`** — DuckDuckGo web search, no API key required. Returns top 5 results in ~300 tokens. **Experimental, unofficial, scraping-based** — DuckDuckGo does not provide a public search API, so this uses their HTML endpoint. Expect occasional breakage. See [ddg-search caveats](#ddg-search-caveats).
 - **`apfel-mcp-search-and-fetch`** — compound tool: search then fetch the top N results in a single tool call. Saves ~500 tokens of tool-call schema and conversation overhead versus calling search + fetch separately. Hard cap 5000 chars (~1250 tokens).
+- **`apfel-mcp-fs`** — read a bounded slice of a local text file. **Read-only**: it cannot write, move, or delete anything. Path allowlist via `APFEL_MCP_FS_ROOTS` (defaults to the working directory); paths outside the roots and binary files are refused. Default ~4000 chars, hard cap 6000 chars. See [fs caveats](#fs-caveats).
 
 ## Why a separate repo
 
@@ -27,12 +28,13 @@ apfel itself ships `mcp/calculator/` and `mcp/http-test-server/` as **test fixtu
 brew install Arthur-Ficial/tap/apfel-mcp
 ```
 
-Installs three binaries to `/opt/homebrew/bin/`:
+Installs four binaries to `/opt/homebrew/bin/`:
 
 ```
 apfel-mcp-url-fetch
 apfel-mcp-ddg-search
 apfel-mcp-search-and-fetch
+apfel-mcp-fs
 ```
 
 ### Pip
@@ -63,6 +65,12 @@ apfel --mcp $(which apfel-mcp-ddg-search) "Search for Swift 7 release notes"
 apfel --mcp $(which apfel-mcp-search-and-fetch) "What did Apple announce this week?"
 ```
 
+Read a local file (authorize a directory with `APFEL_MCP_FS_ROOTS`):
+
+```bash
+APFEL_MCP_FS_ROOTS="$HOME/Downloads" apfel --mcp $(which apfel-mcp-fs) "Read ~/Downloads/app.log and tell me what failed"
+```
+
 All three attached in chat mode:
 
 ```bash
@@ -90,6 +98,15 @@ DuckDuckGo **does not provide a public web-search API**. The Instant Answer API 
 If reliability matters more to you than zero configuration, run your own [SearXNG](https://github.com/searxng/searxng) and point `apfel-mcp-url-fetch` at it.
 
 **This pattern is directly modeled on [OpenClaw's DDG extension](https://github.com/openclaw/openclaw/tree/main/extensions/duckduckgo)**, which uses the same approach with the same caveats. Credit where due.
+
+## fs caveats
+
+`apfel-mcp-fs` is intentionally minimal and read-only. What it does **not** do:
+
+- **No writing, moving, renaming, or deleting.** It only reads. Apple's on-device 3B model is refusal-heavy on destructive file operations and the 4096-token context can't hold the state needed to organize a folder, so write operations are out of scope. Point a larger model at a general filesystem agent if that's your use case.
+- **One file at a time, bounded.** Output is hard-capped at 6000 characters (~1500 tokens). A large log or source file is truncated with a visible suffix - you get the first slice, not the whole thing.
+- **Text only.** Files with NUL bytes are refused rather than dumped into the context as garbage.
+- **Allowlisted.** Reads are confined to the directories in `APFEL_MCP_FS_ROOTS` (colon-separated absolute paths; defaults to the process working directory). Paths outside - including via `..` or symlinks that resolve outside - are refused. Set the roots to exactly the directories you want apfel to see.
 
 ## Development
 
@@ -135,7 +152,6 @@ These don't exist yet. All welcome as issues or PRs. Each one should land with t
 | `apfel-mcp-sqlite-query` | Read-only SQL query against a local SQLite file, result count capped | Ask apfel questions about local data without uploading it anywhere |
 | `apfel-mcp-git` | Recent commits, file blame, branch info, read-only | Let apfel explain your repo history from the command line |
 | `apfel-mcp-man` | Fetch a section of a man page or built-in help text | Turn `man ls` into a conversation |
-| `apfel-mcp-fs` | Bounded slice of a local file with path allowlist and byte cap | Read code/config files into apfel without pasting them |
 | `apfel-mcp-datetime` | Current date, timezone conversion, relative date parsing | Fix the "3B model doesn't know today's date" problem |
 | `apfel-mcp-shell` | Allowlisted read-only shell commands (`df`, `uname`, `uptime`, `ps`) | Let apfel diagnose the machine it runs on |
 | `apfel-mcp-clipboard` | Read the current macOS pasteboard (with an always-on privacy warning) | "Summarize what I just copied" |

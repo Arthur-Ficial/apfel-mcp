@@ -2,8 +2,8 @@
 
 apfel (https://github.com/Arthur-Ficial/apfel) is a CLI + OpenAI-compatible
 server wrapping Apple's on-device FoundationModels LLM. Its context window is
-4096 tokens. This package ships three MCP (Model Context Protocol) servers
+4096 tokens. This package ships four MCP (Model Context Protocol) servers
 designed from the ground up to fit that budget.
 """
 
-__version__ = "0.1.2"
+__version__ = "0.2.0"
