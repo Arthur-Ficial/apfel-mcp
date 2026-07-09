@@ -3,367 +3,212 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <title>apfel-mcp: give apfel the web and your files</title>
-  <meta name="description" content="Four small MCP tools that let apfel (Apple's on-device LLM) reach the web and read local files: url-fetch, ddg-search, search-and-fetch, and fs. Each result is trimmed to fit apfel's 4096-token context window.">
+  <meta name="description" content="Four small MCP tools that let apfel (Apple's on-device LLM) read a web page, search the web, and read local files. 45 real, unedited example runs. brew install Arthur-Ficial/tap/apfel-mcp.">
   <link rel="canonical" href="https://apfel-mcp.franzai.com/">
-
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="apfel-mcp">
   <meta property="og:url" content="https://apfel-mcp.franzai.com/">
   <meta property="og:title" content="apfel-mcp: give apfel the web and your files">
-  <meta property="og:description" content="apfel runs on-device and can't reach the internet or read files on its own. apfel-mcp adds four small tools that do exactly that, sized for apfel's 4096-token window.">
+  <meta property="og:description" content="Four small MCP tools for apfel: read a web page, search the web, search+read in one call, read a local file. 45 real example runs on this page.">
   <meta property="og:image" content="https://apfel-mcp.franzai.com/img/icon.png">
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="apfel-mcp: give apfel the web and your files">
-  <meta name="twitter:description" content="Four small MCP tools for apfel: read a web page, search the web, search+read in one call, read a local file. brew install Arthur-Ficial/tap/apfel-mcp.">
   <meta name="theme-color" content="#0066cc">
-
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "apfel-mcp",
-    "operatingSystem": "macOS 26+",
-    "applicationCategory": "DeveloperApplication",
-    "description": "Four MCP servers for apfel: url-fetch, ddg-search, search-and-fetch, and fs. Token-budget-optimized for apfel's 4096-token context window.",
-    "url": "https://apfel-mcp.franzai.com/",
-    "downloadUrl": "https://github.com/Arthur-Ficial/apfel-mcp",
-    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-    "author": { "@type": "Person", "name": "Franz Enzenhofer", "url": "https://fullstackoptimization.com" }
-  }
-  </script>
-
   <link rel="icon" type="image/png" href="img/icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --accent: #0066cc;
-      --accent-ink: #004a99;
-      --ink: #16181d;
-      --ink-soft: #4a5160;
-      --line: #e4e7ec;
-      --line-soft: #eef1f4;
-      --bg: #ffffff;
-      --bg-tint: #f7f9fb;
-      --warn-bg: #fff8e6;
-      --warn-line: #f2d98a;
-      --r: 12px;
-      --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
-      --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
-      --display: "Fraunces", Georgia, serif;
-      --maxw: 940px;
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --accent:#0066cc;--accent-ink:#004a99;--ink:#16181d;--ink-soft:#4a5160;
+      --line:#e4e7ec;--line-soft:#eef1f4;--bg:#fff;--bg-tint:#f7f9fb;
+      --t-search:#0066cc;--t-fetch:#0e8a5f;--t-fs:#8a5a00;
+      --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+      --sans:system-ui,-apple-system,"Segoe UI",sans-serif;--display:"Fraunces",Georgia,serif;
+      --maxw:960px;--r:12px;
     }
+    html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+    body{font-family:var(--sans);color:var(--ink);background:var(--bg);line-height:1.55;font-size:16px;-webkit-font-smoothing:antialiased}
+    .wrap{max-width:var(--maxw);margin:0 auto;padding:0 20px}
+    a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+    code{font-family:var(--mono);font-size:.88em}
 
-    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
-    body {
-      font-family: var(--sans);
-      color: var(--ink);
-      background: var(--bg);
-      line-height: 1.6;
-      font-size: 17px;
-      -webkit-font-smoothing: antialiased;
-    }
-    .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+    header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.92);backdrop-filter:saturate(180%) blur(8px);border-bottom:1px solid var(--line)}
+    .nav{display:flex;align-items:center;gap:16px;height:54px}
+    .brand{font-family:var(--mono);font-weight:600;font-size:15px;color:var(--ink)}
+    .brand:hover{text-decoration:none}.nav .sp{flex:1}
+    .nav a.nl{color:var(--ink-soft);font-size:14px}.nav a.nl:hover{color:var(--ink);text-decoration:none}
 
-    a { color: var(--accent); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    code { font-family: var(--mono); font-size: 0.9em; }
+    .btn{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:13.5px;font-weight:500;padding:10px 15px;border-radius:10px;border:1px solid var(--line);color:var(--ink);background:#fff;cursor:pointer;transition:.15s}
+    .btn:hover{border-color:var(--ink-soft);text-decoration:none}
+    .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}.btn.primary:hover{background:var(--accent-ink)}
 
-    /* ---- header ---- */
-    header {
-      position: sticky; top: 0; z-index: 20;
-      background: rgba(255,255,255,0.9);
-      backdrop-filter: saturate(180%) blur(8px);
-      border-bottom: 1px solid var(--line);
-    }
-    .nav { display: flex; align-items: center; gap: 20px; height: 58px; }
-    .brand { font-family: var(--mono); font-weight: 600; font-size: 16px; color: var(--ink); letter-spacing: -0.02em; }
-    .brand:hover { text-decoration: none; }
-    .nav .spacer { flex: 1; }
-    .nav a.navlink { color: var(--ink-soft); font-size: 14.5px; }
-    .nav a.navlink:hover { color: var(--ink); text-decoration: none; }
-    @media (max-width: 600px) { .nav a.navlink.hide-sm { display: none; } }
+    .hero{padding:52px 0 20px}
+    .eyebrow{font-family:var(--mono);font-size:12.5px;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+    h1{font-family:var(--display);font-weight:600;letter-spacing:-.02em;font-size:clamp(34px,7vw,56px);line-height:1.05;color:var(--ink);max-width:16ch;margin-bottom:16px}
+    .lead{font-size:18px;color:var(--ink-soft);max-width:56ch;margin-bottom:26px}
+    .lead strong{color:var(--ink);font-weight:600}
 
-    /* ---- buttons ---- */
-    .btn {
-      display: inline-flex; align-items: center; gap: 8px;
-      font-family: var(--mono); font-size: 14px; font-weight: 500;
-      padding: 10px 16px; border-radius: 10px; border: 1px solid var(--line);
-      color: var(--ink); background: #fff; cursor: pointer; transition: .15s;
-    }
-    .btn:hover { border-color: var(--ink-soft); text-decoration: none; }
-    .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-    .btn.primary:hover { background: var(--accent-ink); border-color: var(--accent-ink); }
+    /* hero tool grid — the "what tools" answer, up top */
+    .toolgrid{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:26px}
+    @media(min-width:620px){.toolgrid{grid-template-columns:1fr 1fr}}
+    .tg{border:1px solid var(--line);border-left:3px solid var(--tc,var(--accent));border-radius:10px;padding:13px 15px;background:#fff}
+    .tg .tn{font-family:var(--mono);font-size:13.5px;font-weight:600;color:var(--ink);word-break:break-all}
+    .tg .tg-give{font-family:var(--mono);font-size:12px;color:var(--tc,var(--accent));margin:3px 0 6px}
+    .tg .td{font-size:13.5px;color:var(--ink-soft)}
 
-    /* ---- hero ---- */
-    .hero { padding: 64px 0 40px; }
-    .eyebrow { font-family: var(--mono); font-size: 13px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 18px; }
-    h1 {
-      font-family: var(--display); font-weight: 600; letter-spacing: -0.02em;
-      font-size: clamp(38px, 6.5vw, 62px); line-height: 1.04; color: var(--ink);
-      max-width: 15ch; margin-bottom: 22px;
-    }
-    .lead { font-size: 20px; color: var(--ink-soft); max-width: 60ch; margin-bottom: 30px; }
-    .lead strong { color: var(--ink); font-weight: 600; }
-    .cta-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
-    .facts { margin-top: 30px; display: flex; flex-wrap: wrap; gap: 8px 20px; font-family: var(--mono); font-size: 13px; color: var(--ink-soft); }
-    .facts span { display: inline-flex; align-items: center; gap: 7px; }
-    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+    .install-line{font-family:var(--mono);font-size:14px;background:#0f1116;color:#e6e9ef;padding:12px 15px;border-radius:10px;overflow-x:auto;margin-bottom:18px}
+    .install-line .g{color:#7bd88f}
+    .cta{display:flex;flex-wrap:wrap;gap:10px}
 
-    /* ---- sections ---- */
-    section { padding: 52px 0; border-top: 1px solid var(--line-soft); }
-    .kicker { font-family: var(--mono); font-size: 13px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
-    h2 { font-family: var(--display); font-weight: 600; font-size: clamp(26px, 4vw, 34px); letter-spacing: -0.02em; margin-bottom: 12px; line-height: 1.1; }
-    .section-lead { color: var(--ink-soft); max-width: 62ch; margin-bottom: 28px; }
+    section{padding:44px 0;border-top:1px solid var(--line-soft)}
+    .kicker{font-family:var(--mono);font-size:12.5px;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:9px}
+    h2{font-family:var(--display);font-weight:600;font-size:clamp(24px,4.5vw,32px);letter-spacing:-.02em;margin-bottom:10px;line-height:1.1}
+    .slead{color:var(--ink-soft);max-width:60ch;margin-bottom:20px;font-size:15.5px}
 
-    /* ---- which-tool table ---- */
-    .picker { width: 100%; border-collapse: collapse; font-size: 15.5px; }
-    .picker th, .picker td { text-align: left; padding: 14px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
-    .picker thead th { font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); font-weight: 600; border-bottom: 2px solid var(--line); }
-    .picker tr:last-child td { border-bottom: none; }
-    .picker td.want { font-weight: 600; color: var(--ink); }
-    .picker td .toolname { font-family: var(--mono); font-size: 13.5px; color: var(--accent-ink); font-weight: 500; }
-    .picker td.note { color: var(--ink-soft); font-size: 14px; }
-    .picker .star { color: var(--accent); }
-    .table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r); }
-    .tip { margin-top: 18px; font-size: 15px; color: var(--ink-soft); }
-    .tip code { background: var(--bg-tint); padding: 2px 6px; border-radius: 6px; }
+    /* filter */
+    .filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
+    .fbtn{font-family:var(--mono);font-size:12.5px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink-soft);cursor:pointer}
+    .fbtn[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
 
-    /* ---- steps ---- */
-    .steps { display: grid; gap: 18px; }
-    .step { display: grid; grid-template-columns: 40px 1fr; gap: 18px; align-items: start; }
-    .step .num { font-family: var(--mono); font-weight: 600; color: #fff; background: var(--accent); width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; font-size: 15px; }
-    .step h3 { font-size: 17px; margin-bottom: 8px; }
-    .step p { color: var(--ink-soft); font-size: 15px; margin-bottom: 10px; }
+    /* example cards */
+    .ex{display:grid;grid-template-columns:1fr;gap:12px}
+    @media(min-width:720px){.ex{grid-template-columns:1fr 1fr}}
+    .card{border:1px solid var(--line);border-radius:var(--r);padding:16px;background:#fff;display:flex;flex-direction:column;gap:9px}
+    .badge{align-self:flex-start;font-family:var(--mono);font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;color:#fff;background:var(--bc)}
+    .q{font-family:var(--mono);font-size:12.5px;color:var(--ink);line-height:1.5}
+    .q .qk{color:var(--ink-soft)}
+    .a{font-size:14px;color:var(--ink-soft);border-left:2px solid var(--line);padding-left:11px}
+    .a strong{color:var(--ink)}
+    .secs{font-family:var(--mono);font-size:11px;color:#9aa1ad;margin-top:auto}
 
-    pre {
-      font-family: var(--mono); font-size: 13.5px; background: #0f1116; color: #e6e9ef;
-      padding: 14px 16px; border-radius: 10px; overflow-x: auto; line-height: 1.55;
-    }
-    pre .c { color: #7d8697; }        /* comment */
-    pre .g { color: #7bd88f; }        /* command bits */
+    .steps{display:grid;gap:16px}
+    .step{display:grid;grid-template-columns:32px 1fr;gap:14px;align-items:start}
+    .step .num{font-family:var(--mono);font-weight:600;color:#fff;background:var(--accent);width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-size:14px}
+    .step h3{font-size:16px;margin-bottom:6px}.step p{color:var(--ink-soft);font-size:14.5px;margin-bottom:9px}
+    pre{font-family:var(--mono);font-size:13px;background:#0f1116;color:#e6e9ef;padding:13px 15px;border-radius:10px;overflow-x:auto;line-height:1.5}
+    pre .c{color:#7d8697}pre .g{color:#7bd88f}
 
-    /* ---- tool cards (DRY: rendered from TOOLS) ---- */
-    .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-    @media (max-width: 680px) { .cards { grid-template-columns: 1fr; } }
-    .card { border: 1px solid var(--line); border-radius: var(--r); padding: 22px; background: #fff; }
-    .card .cname { font-family: var(--mono); font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 4px; word-break: break-all; }
-    .card .cwhat { font-weight: 600; font-size: 15px; color: var(--accent-ink); margin-bottom: 10px; }
-    .card .cdesc { color: var(--ink-soft); font-size: 14.5px; margin-bottom: 14px; }
-    .card .meta { display: flex; flex-wrap: wrap; gap: 6px; }
-    .chip { font-family: var(--mono); font-size: 11.5px; color: var(--ink-soft); background: var(--bg-tint); border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; }
-    .card.warn { background: var(--warn-bg); border-color: var(--warn-line); }
-    .card .caveat { font-size: 13.5px; color: #8a6d1a; margin-top: 12px; }
+    .reqs{display:grid;gap:11px;margin-bottom:20px}
+    .req{display:flex;gap:11px;align-items:baseline;font-size:15px}
+    .req .ri{color:var(--accent);font-family:var(--mono)}
+    .callout{background:var(--bg-tint);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;font-size:14.5px;color:var(--ink-soft)}
+    .callout b{color:var(--ink)}
+    .note{background:#fff8e6;border:1px solid #f2d98a;border-radius:10px;padding:12px 15px;font-size:13.5px;color:#8a6d1a;margin-bottom:20px}
 
-    /* ---- requirements ---- */
-    .reqs { display: grid; gap: 12px; }
-    .req { display: flex; gap: 12px; align-items: baseline; font-size: 15.5px; }
-    .req b { font-weight: 600; }
-    .req .r-ico { color: var(--accent); font-family: var(--mono); }
-
-    /* ---- footer ---- */
-    footer { border-top: 1px solid var(--line); padding: 40px 0; color: var(--ink-soft); font-size: 14px; }
-    footer .frow { display: flex; flex-wrap: wrap; gap: 8px 22px; align-items: center; }
-    footer .spacer { flex: 1; }
-
-    .callout { background: var(--bg-tint); border: 1px solid var(--line); border-radius: var(--r); padding: 18px 20px; font-size: 15px; color: var(--ink-soft); }
-    .callout b { color: var(--ink); }
+    footer{border-top:1px solid var(--line);padding:34px 0;color:var(--ink-soft);font-size:13.5px}
+    footer .fr{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center}footer .sp{flex:1}
   </style>
 </head>
 <body>
-
-  <header>
-    <div class="wrap nav">
-      <a class="brand" href="/">apfel-mcp</a>
-      <span class="spacer"></span>
-      <a class="navlink hide-sm" href="#tools">Tools</a>
-      <a class="navlink hide-sm" href="#use">Use it</a>
-      <a class="navlink" href="https://github.com/Arthur-Ficial/apfel-mcp">GitHub</a>
-    </div>
-  </header>
+  <header><div class="wrap nav">
+    <a class="brand" href="/">apfel-mcp</a><span class="sp"></span>
+    <a class="nl" href="#see">See it work</a>
+    <a class="nl" href="#use">Use it</a>
+    <a class="nl" href="https://github.com/Arthur-Ficial/apfel-mcp">GitHub</a>
+  </div></header>
 
   <main>
-    <!-- HERO -->
-    <div class="hero">
-      <div class="wrap">
-        <div class="eyebrow">MCP tools for apfel</div>
-        <h1>Give apfel the web and your files.</h1>
-        <p class="lead">
-          <a href="https://github.com/Arthur-Ficial/apfel">apfel</a> runs Apple's model 100% on-device, so
-          on its own it <strong>can't reach the internet or read your files</strong>.
-          apfel-mcp adds <strong>four small tools</strong> that do exactly that - and nothing else.
-          Each returns a result already trimmed to fit apfel's tiny <strong>4096-token</strong> window.
-        </p>
-        <div class="cta-row">
-          <a class="btn primary" href="#use">Install &amp; use</a>
-          <a class="btn" href="https://github.com/Arthur-Ficial/apfel-mcp">View on GitHub</a>
-        </div>
-        <div class="facts">
-          <span><i class="dot"></i>MIT, open source</span>
-          <span><i class="dot"></i>4 tools, one brew install</span>
-          <span><i class="dot"></i>100% on-device (only URLs get fetched)</span>
-          <span><i class="dot"></i>macOS 26, Apple Silicon</span>
-        </div>
+    <div class="hero"><div class="wrap">
+      <div class="eyebrow">web + files for apfel</div>
+      <h1>Give apfel the web and your files.</h1>
+      <p class="lead"><a href="https://github.com/Arthur-Ficial/apfel">apfel</a> runs Apple's model on-device, so on its own it <strong>can't reach the internet or read your files</strong>. These four tools do exactly that - and trim every result to fit apfel's <strong>4096-token</strong> window.</p>
+      <div class="toolgrid" id="toolgrid"></div>
+      <div class="install-line"><span class="g">brew install</span> Arthur-Ficial/tap/apfel-mcp</div>
+      <div class="cta">
+        <a class="btn primary" href="#see">See 45 real runs &darr;</a>
+        <a class="btn" href="https://github.com/Arthur-Ficial/apfel-mcp">GitHub</a>
       </div>
-    </div>
+    </div></div>
 
-    <!-- WHICH TOOL -->
-    <section id="tools">
-      <div class="wrap">
-        <div class="kicker">Which tool do I need?</div>
-        <h2>Pick by what you want to do.</h2>
-        <p class="section-lead">Attach one, some, or all of them to apfel. If you only remember one, remember <code>search-and-fetch</code> - it covers most "look it up and answer" questions in a single, token-cheap call.</p>
-        <div class="table-scroll">
-          <table class="picker">
-            <thead>
-              <tr><th>You want to&hellip;</th><th>Use</th><th>You give it</th><th>Note</th></tr>
-            </thead>
-            <tbody id="picker-body"><!-- DRY: rendered from TOOLS --></tbody>
-          </table>
-        </div>
-        <p class="tip">Every tool is <b>read-only</b> and returns plain text/markdown. Your prompt never leaves the Mac; only the web tools fetch the URLs you ask about.</p>
-      </div>
-    </section>
+    <section id="see"><div class="wrap">
+      <div class="kicker">See it work</div>
+      <h2>45 real runs. Nothing edited.</h2>
+      <p class="slead">Every card below is a real <code>apfel --mcp &hellip;</code> command run on an Apple Silicon Mac, on-device, on 2026-07-09. The prompt is what was typed; the answer is what apfel returned, verbatim, with the tool's timing.</p>
+      <div class="filters" id="filters"></div>
+      <div class="ex" id="examples"></div>
+      <p class="note"><b>Honest note:</b> the raw <code>apfel-mcp-ddg-search</code> tool is experimental - DuckDuckGo rate-limited it during this run, so none of the examples use it directly. The compound <code>search-and-fetch</code> (which also searches) worked fine. That's the trade-off the README is upfront about.</p>
+    </div></section>
 
-    <!-- USE IT -->
-    <section id="use">
-      <div class="wrap">
-        <div class="kicker">How to use it</div>
-        <h2>Install, attach, ask.</h2>
-        <p class="section-lead">You need <a href="https://github.com/Arthur-Ficial/apfel">apfel</a> working first (<code>brew install Arthur-Ficial/tap/apfel</code>, macOS 26 + Apple Intelligence).</p>
-        <div class="steps">
-          <div class="step">
-            <div class="num">1</div>
-            <div>
-              <h3>Install the tools</h3>
-              <p>One tap, four commands land on your <code>PATH</code>.</p>
-              <pre><span class="g">brew install</span> Arthur-Ficial/tap/apfel-mcp</pre>
-            </div>
-          </div>
-          <div class="step">
-            <div class="num">2</div>
-            <div>
-              <h3>Attach one to apfel with <code>--mcp</code></h3>
-              <p>apfel launches the tool as a subprocess and discovers what it offers. Start with the compound one:</p>
-              <pre><span class="g">apfel</span> --mcp $(which apfel-mcp-search-and-fetch) <span class="c"># then ask</span></pre>
-            </div>
-          </div>
-          <div class="step">
-            <div class="num">3</div>
-            <div>
-              <h3>Ask a question that needs it</h3>
-              <p>The on-device model decides when to call the tool, reads the trimmed result, and answers.</p>
-              <pre><span class="g">apfel</span> --mcp $(which apfel-mcp-search-and-fetch) \
-      <span class="g">"What did Apple announce this week?"</span></pre>
-            </div>
-          </div>
-        </div>
-        <p class="tip" style="margin-top:24px">For a long <code>--chat</code> session with these tools, add <code>--context-strategy sliding-window --context-max-turns 4</code> so the (large) tool results don't overflow the 4096-token window.</p>
+    <section id="use"><div class="wrap">
+      <div class="kicker">How to use it</div>
+      <h2>Install, attach, ask.</h2>
+      <p class="slead">You need <a href="https://github.com/Arthur-Ficial/apfel">apfel</a> first (<code>brew install Arthur-Ficial/tap/apfel</code>, macOS 26 + Apple Intelligence).</p>
+      <div class="steps">
+        <div class="step"><div class="num">1</div><div><h3>Install</h3><p>Four commands land on your PATH.</p><pre><span class="g">brew install</span> Arthur-Ficial/tap/apfel-mcp</pre></div></div>
+        <div class="step"><div class="num">2</div><div><h3>Attach a tool with <code>--mcp</code></h3><p>apfel runs it as a subprocess and discovers what it offers.</p><pre><span class="g">apfel</span> --mcp $(which apfel-mcp-search-and-fetch) \
+      <span class="g">"What is the Model Context Protocol?"</span></pre></div></div>
+        <div class="step"><div class="num">3</div><div><h3>Ask</h3><p>The on-device model calls the tool, reads the trimmed result, and answers. For long <code>--chat</code> sessions add <code>--context-strategy sliding-window --context-max-turns 4</code>.</p></div></div>
       </div>
-    </section>
+    </div></section>
 
-    <!-- THE FOUR TOOLS -->
-    <section>
-      <div class="wrap">
-        <div class="kicker">The four tools, in detail</div>
-        <h2>Small, honest, one job each.</h2>
-        <p class="section-lead">Every result is hard-capped so it fits apfel's context. Where a tool has real limits, they're stated plainly - no surprises.</p>
-        <div class="cards" id="tool-cards"><!-- DRY: rendered from TOOLS --></div>
+    <section><div class="wrap">
+      <div class="kicker">Before you start</div>
+      <h2>What you need.</h2>
+      <div class="reqs">
+        <div class="req"><span class="ri">1.</span><span><b>apfel, working.</b> Install it first: <code>brew install Arthur-Ficial/tap/apfel</code>.</span></div>
+        <div class="req"><span class="ri">2.</span><span><b>macOS 26, Apple Silicon, Apple Intelligence on.</b> That's apfel's requirement; apfel-mcp is plain Python.</span></div>
+        <div class="req"><span class="ri">3.</span><span><b>No keys, no cloud.</b> The web tools hit the open web directly; your prompt stays on the Mac.</span></div>
       </div>
-    </section>
-
-    <!-- REQUIREMENTS -->
-    <section>
-      <div class="wrap">
-        <div class="kicker">Before you start</div>
-        <h2>What you need.</h2>
-        <div class="reqs" style="margin-bottom:24px">
-          <div class="req"><span class="r-ico">1.</span><span><b>apfel, working.</b> apfel-mcp plugs into apfel - install it first: <code>brew install Arthur-Ficial/tap/apfel</code>.</span></div>
-          <div class="req"><span class="r-ico">2.</span><span><b>macOS 26 (Tahoe), Apple Silicon, Apple Intelligence on.</b> That's apfel's requirement; apfel-mcp itself is plain Python.</span></div>
-          <div class="req"><span class="r-ico">3.</span><span><b>Nothing else.</b> No API keys, no accounts, no cloud. The web tools hit the open web directly; everything else stays on your Mac.</span></div>
-        </div>
-        <div class="callout">
-          <b>Why so small?</b> apfel's context window is 4096 tokens - a few paragraphs. These tools are built to hand the model a <em>tiny, useful</em> result that fits, instead of a huge page it can't read. That's the whole design.
-        </div>
-      </div>
-    </section>
+      <div class="callout" style="margin-top:18px"><b>Why so small?</b> apfel's window is 4096 tokens - a few paragraphs. These tools hand the model a tiny, useful result that fits, instead of a whole page it can't read. That's the design.</div>
+    </div></section>
   </main>
 
-  <footer>
-    <div class="wrap frow">
-      <span>apfel-mcp &middot; MIT</span>
-      <span class="spacer"></span>
-      <a href="https://github.com/Arthur-Ficial/apfel-mcp">GitHub</a>
-      <a href="https://github.com/Arthur-Ficial/apfel">apfel</a>
-      <a href="https://apfel.franzai.com">apfel.franzai.com</a>
-    </div>
-  </footer>
+  <footer><div class="wrap fr">
+    <span>apfel-mcp &middot; MIT</span><span class="sp"></span>
+    <a href="https://github.com/Arthur-Ficial/apfel-mcp">GitHub</a>
+    <a href="https://apfel.franzai.com">apfel</a>
+  </div></footer>
 
   <script>
-    // Single source of truth for the four tools. Both the "which tool" table
-    // and the detail cards render from this - change it once, both update.
+    // one source of truth for the four tools (hero grid)
     const TOOLS = [
-      {
-        bin: "apfel-mcp-search-and-fetch",
-        want: "Ask a question that needs the web",
-        give: "a question",
-        note: "searches AND reads, in one call",
-        star: true,
-        desc: "The compound tool: it runs a DuckDuckGo search and fetches the top result pages in a single tool call. One round-trip instead of three, which matters when every tool call costs tokens you don't have.",
-        chips: ["search + fetch", "5000-char cap", "start here"]
-      },
-      {
-        bin: "apfel-mcp-url-fetch",
-        want: "Read a specific web page",
-        give: "a URL",
-        note: "article text, ads stripped",
-        desc: "Fetches an http(s) URL, extracts the main article body (Readability), drops navigation and ads, and returns clean markdown. Blocks private-network addresses, caps the download at 2 MB, times out at 10s.",
-        chips: ["Readability", "SSRF-guarded", "6000-char cap"]
-      },
-      {
-        bin: "apfel-mcp-ddg-search",
-        want: "Search the web",
-        give: "a search query",
-        note: "experimental (DuckDuckGo scrape)",
-        warn: true,
-        desc: "A plain web search via DuckDuckGo's HTML endpoint. No API key, no account.",
-        caveat: "Experimental and unofficial: DuckDuckGo has no public search API, so this scrapes their HTML and can break or rate-limit. Fine for casual use; don't build on it.",
-        chips: ["no API key", "top 5 results", "2000-char cap"]
-      },
-      {
-        bin: "apfel-mcp-fs",
-        want: "Read a local text file",
-        give: "a file path",
-        note: "read-only, no writing/deleting",
-        desc: "Reads a bounded slice of a local text file so apfel can answer questions about it. Confined to the directories you allow via APFEL_MCP_FS_ROOTS; paths outside them, and binary files, are refused.",
-        chips: ["read-only", "path allowlist", "6000-char cap"]
-      }
+      {bin:"apfel-mcp-search-and-fetch", give:"a question", desc:"Searches the web and reads the top pages in one call. The best default.", c:"var(--t-search)"},
+      {bin:"apfel-mcp-url-fetch", give:"a URL", desc:"Reads one web page - article text only, ads and nav stripped.", c:"var(--t-fetch)"},
+      {bin:"apfel-mcp-ddg-search", give:"a search query", desc:"Raw DuckDuckGo results. Experimental (no official API).", c:"var(--t-search)"},
+      {bin:"apfel-mcp-fs", give:"a file path", desc:"Reads a local text file. Read-only, path-allowlisted.", c:"var(--t-fs)"}
     ];
-
-    // "Which tool" table
-    document.getElementById("picker-body").innerHTML = TOOLS.map(t => `
-      <tr>
-        <td class="want">${t.want}${t.star ? ' <span class="star" title="best default">&#9733;</span>' : ''}</td>
-        <td><span class="toolname">${t.bin}</span></td>
-        <td>${t.give}</td>
-        <td class="note">${t.note}</td>
-      </tr>`).join("");
-
-    // Detail cards
-    document.getElementById("tool-cards").innerHTML = TOOLS.map(t => `
-      <div class="card${t.warn ? ' warn' : ''}">
-        <div class="cname">${t.bin}</div>
-        <div class="cwhat">${t.want}${t.star ? ' &#9733;' : ''}</div>
-        <div class="cdesc">${t.desc}</div>
-        <div class="meta">${t.chips.map(c => `<span class="chip">${c}</span>`).join("")}</div>
-        ${t.caveat ? `<div class="caveat">${t.caveat}</div>` : ""}
+    document.getElementById("toolgrid").innerHTML = TOOLS.map(t=>`
+      <div class="tg" style="--tc:${t.c}">
+        <div class="tn">${t.bin}</div>
+        <div class="tg-give">you give it: ${t.give}</div>
+        <div class="td">${t.desc}</div>
       </div>`).join("");
+
+    const EXAMPLES = [{"tool": "search-and-fetch", "prompt": "Search the web and tell me: what is the Model Context Protocol?", "answer": "The Model Context Protocol (MCP) is an open-source standard for connecting AI applications to external systems. It allows AI applications like Claude or ChatGPT to access data sources, tools, and workflows, enabling them to perform tasks and provide a more personalized user experience. Think of MCP…", "sec": 7.4}, {"tool": "url-fetch", "prompt": "Fetch https://en.wikipedia.org/wiki/JSON and tell me in one sentence what JSON is.", "answer": "JSON is a lightweight data interchange format that is easy for humans to read and write and easy for machines to parse and generate.", "sec": 4.8}, {"tool": "fs", "prompt": "Read the file server.log and tell me what failed.", "answer": "The server encountered a timeout error when trying to connect to the database. This occurred twice within a 5-second window, indicating that the server was unable to establish a connection to the database after attempting to do so multiple times.", "sec": 4.4}, {"tool": "search-and-fetch", "prompt": "Search the web and tell me the latest stable version of the Python language.", "answer": "The latest stable version of the Python language is Python 3.14.0, which is the newest major release as of October 7, 2025. This release includes many new features and optimizations compared to Python 3.13.", "sec": 5.1}, {"tool": "url-fetch", "prompt": "Fetch https://en.wikipedia.org/wiki/Model_Context_Protocol and summarize it in two sentences.", "answer": "Model Context Protocol (MCP) is an open-source framework developed by Anthropic to standardize the interaction between large language models and external tools, systems, and data sources. MCP provides a standardized interface for reading files, executing functions, and handling contextual prompts,…", "sec": 4.1}, {"tool": "fs", "prompt": "Read the file config.ini and tell me which port the server uses.", "answer": "The server uses port 9443.", "sec": 2.6}, {"tool": "search-and-fetch", "prompt": "Search the web and tell me who wrote the science-fiction novel Dune.", "answer": "The science-fiction novel Dune was written by Frank Herbert.", "sec": 5.7}, {"tool": "url-fetch", "prompt": "Fetch https://en.wikipedia.org/wiki/Swift_(programming_language) and tell me who originally created Swift.", "answer": "The tool returned that Chris Lattner originally created Swift.", "sec": 3.7}, {"tool": "fs", "prompt": "Read the file sales.csv and tell me the total number of units sold.", "answer": "The total number of units sold is 534.", "sec": 2.6}, {"tool": "search-and-fetch", "prompt": "Search the web and tell me the height of Mount Everest.", "answer": "The height of Mount Everest is 29,029 feet (8,848 meters).", "sec": 5.5}, {"tool": "url-fetch", "prompt": "Fetch https://en.wikipedia.org/wiki/Homebrew_(package_manager) and say in one sentence what Homebrew is.", "answer": "Homebrew is a package manager for macOS and Linux that simplifies the installation and management of software.", "sec": 4.0}, {"tool": "fs", "prompt": "Read the file TODO.md and tell me how many tasks are still open.", "answer": "There are **2 tasks** still open.", "sec": 2.7}, {"tool": "search-and-fetch", "prompt": "Search the web and tell me what Homebrew is on macOS.", "answer": "Homebrew is a package manager for macOS and Linux that allows users to easily install, update, and manage software using a single line command. It is a powerful tool that can enhance the capabilities of a system by providing access to thousands of programs not available through the Apple App Store.…", "sec": 7.7}, {"tool": "url-fetch", "prompt": "Fetch https://en.wikipedia.org/wiki/Vienna and give me three short facts about Vienna.", "answer": "Here are three short facts about Vienna: 1. Vienna is the capital and largest city of Austria. 2. It is known for its rich musical heritage, being the birthplace of composers such as Wolfgang Amadeus Mozart and Ludwig van Beethoven. 3. Vienna is also famous for its stunning architecture, including…", "sec": 5.3}, {"tool": "fs", "prompt": "Read the file app.py and tell me what the add function does.", "answer": "The `add` function is a simple mathematical function that takes two parameters, `a` and `b`, and returns their sum. It is defined as follows: ```python def add(a, b): return a + b ``` In the `main` function, an example usage of the `add` function is demonstrated. It takes the numbers `2` and `3` as…", "sec": 4.6}, {"tool": "search-and-fetch", "prompt": "Search the web and tell me what the HTTP status code 418 means.", "answer": "HTTP status code 418 is known as \"I'm a teapot.\" It indicates that the server is unwilling to fulfill the request, likely because it is a teapot and cannot brew coffee. This code is often used as a humorous response in web applications, particularly for requests that the server does not handle or…", "sec": 7.4}, {"tool": "url-fetch", "prompt": "Fetch https://en.wikipedia.org/wiki/DuckDuckGo and tell me its main selling point in one sentence.", "answer": "DuckDuckGo's main selling point is its emphasis on privacy, as it does not track user searches or share them with third parties.", "sec": 4.3}, {"tool": "fs", "prompt": "Read the file sales.csv and tell me which month had the fewest units.", "answer": "The month with the fewest units is **Mar**, with 99 units.", "sec": 2.7}, {"tool": "search-and-fetch", "prompt": "Search the web and tell me the capital city of Kazakhstan.", "answer": "The capital city of Kazakhstan is Astana, also known as Nur-Sultan.", "sec": 4.4}, {"tool": "url-fetch", "prompt": "Fetch https://en.wikipedia.org/wiki/Apple_silicon and explain in one sentence what Apple silicon is.", "answer": "Apple silicon is a custom-designed processor architecture developed by Apple for its Macintosh computers, iPads, and other products, featuring ARM-based technology with improved performance and energy efficiency compared to previous processors.", "sec": 4.9}, {"tool": "fs", "prompt": "Read the file config.ini and tell me how many workers are configured.", "answer": "There are 4 workers configured.", "sec": 2.7}, {"tool": "search-and-fetch", "prompt": "Search the web and tell me what DuckDuckGo is.", "answer": "DuckDuckGo is a search engine that emphasizes privacy and protection. It is known for not tracking user data or using personal information to tailor search results or ads. DuckDuckGo is designed to provide users with a more secure and private browsing experience.", "sec": 5.3}, {"tool": "url-fetch", "prompt": "Fetch https://en.wikipedia.org/wiki/Large_language_model and define a large language model in one sentence.", "answer": "A large language model is a sophisticated artificial intelligence system designed to understand, interpret, and generate human-like text by learning patterns and context from vast amounts of data.", "sec": 4.7}, {"tool": "fs", "prompt": "Read the file server.log and tell me how many times the database error occurred.", "answer": "The database error occurred **twice**.", "sec": 2.8}, {"tool": "search-and-fetch", "prompt": "Search the web and tell me who painted the Mona Lisa.", "answer": "The Mona Lisa was painted by the Italian artist Leonardo da Vinci.", "sec": 4.9}, {"tool": "url-fetch", "prompt": "Fetch https://example.com and tell me what the page contains in one sentence.", "answer": "The page \"Example Domain\" is a documentation example domain meant for use in examples without needing permission and should not be used in operations.", "sec": 2.5}, {"tool": "fs", "prompt": "Read the file TODO.md and tell me which task is already done.", "answer": "From the file TODO.md, it appears that the task \"ship login\" has been completed.", "sec": 3.6}, {"tool": "search-and-fetch", "prompt": "Search the web and tell me what the Swift programming language is used for.", "answer": "Swift is a programming language developed by Apple, aimed at both new and experienced developers. It offers an expressive and easy-to-read syntax, making it accessible for beginners. The language provides modern, straightforward syntax, default values for instance properties, and custom…", "sec": 10.9}, {"tool": "url-fetch", "prompt": "Fetch https://en.wikipedia.org/wiki/Unix_philosophy and give me one core idea of the Unix philosophy.", "answer": "One core idea of the Unix philosophy is to build simple, compact, clear, modular, and extensible code that can be easily maintained and repurposed by developers other than its creators. This philosophy emphasizes composability over monolithic design and advocates for programs to do one thing well…", "sec": 4.4}, {"tool": "fs", "prompt": "Read the file sales.csv and tell me the average units per month.", "answer": "The average units per month is 150.", "sec": 3.2}, {"tool": "search-and-fetch", "prompt": "Search the web and tell me the largest planet in our solar system.", "answer": "The largest planet in our solar system is Jupiter.", "sec": 7.4}, {"tool": "url-fetch", "prompt": "Fetch https://en.wikipedia.org/wiki/Markdown and say who created Markdown.", "answer": "Markdown was created by Dinesh \"David\" Gruber in 2004.", "sec": 3.6}, {"tool": "fs", "prompt": "Read the file app.py and tell me what main() prints when run.", "answer": "When the `app.py` file is executed, the `main()` function is called. Within this function, the `add(2, 3)` function is defined and called. The `add` function takes two arguments, `a` and `b`, and returns their sum. In this case, `a` is 2 and `b` is 3. Therefore, the sum of 2 and 3 is 5. When…", "sec": 6.6}, {"tool": "search-and-fetch", "prompt": "Search the web and tell me who developed the Linux kernel.", "answer": "Linus Torvalds is the person who developed the Linux kernel. He was a computer science student at the University of Helsinki when he began developing the operating system as a hobby in 1991.", "sec": 10.1}, {"tool": "url-fetch", "prompt": "Fetch https://en.wikipedia.org/wiki/Python_(programming_language) and name one thing Python is used for.", "answer": "Python is a general-purpose programming language used for a variety of applications, including web development, data analysis, artificial intelligence, scientific computing, and automation.", "sec": 4.5}, {"tool": "fs", "prompt": "Read the file notes.txt and tell me the due date.", "answer": "The due date for the task is Friday, July 9, 2026.", "sec": 5.1}, {"tool": "url-fetch", "prompt": "Fetch https://en.wikipedia.org/wiki/HTTP_404 and explain what a 404 means in one sentence.", "answer": "A 404 error indicates that a web client was able to communicate with a server, but the server could not provide the requested resource, often due to a broken or deleted link.", "sec": 4.6}, {"tool": "url-fetch", "prompt": "Fetch https://en.wikipedia.org/wiki/CURL and say in one sentence what curl does.", "answer": "CURL is a client-side URL transfer library that supports numerous internet protocols, including HTTP, HTTPS, FTP, and more, and can handle various authentication mechanisms and security features.", "sec": 4.6}, {"tool": "url-fetch", "prompt": "Fetch https://en.wikipedia.org/wiki/Tokyo and tell me roughly how many people live there.", "answer": "Tokyo, Japan, has a population of approximately 14.25 million people.", "sec": 4.9}, {"tool": "url-fetch", "prompt": "Fetch https://en.wikipedia.org/wiki/Git and describe git in one sentence.", "answer": "Git is a distributed version control system that allows developers to manage and collaborate on source code efficiently.", "sec": 3.7}, {"tool": "url-fetch", "prompt": "Fetch https://en.wikipedia.org/wiki/Linux and say in one sentence what Linux is.", "answer": "Linux is a family of free and open-source Unix-like operating systems based on the Linux kernel.", "sec": 34.8}, {"tool": "url-fetch", "prompt": "Fetch https://en.wikipedia.org/wiki/SQLite and describe SQLite in one sentence.", "answer": "SQLite is a free and open-source, lightweight, embedded database engine written in C, widely deployed for its simplicity and efficiency, and it implements most of the SQL standard with ACID guarantees.", "sec": 10.1}, {"tool": "url-fetch", "prompt": "Fetch https://en.wikipedia.org/wiki/Regular_expression and define a regular expression in one sentence.", "answer": "A regular expression is a sequence of characters that specifies a match pattern in text.", "sec": 12.4}, {"tool": "url-fetch", "prompt": "Fetch https://en.wikipedia.org/wiki/Coffee and tell me where coffee is believed to have originated.", "answer": "According to the Wikipedia article, coffee is believed to have originated in the region of southern Arabia, specifically among the Sufis of Yemen, in the middle of the 15th century.", "sec": 7.3}, {"tool": "url-fetch", "prompt": "Fetch https://en.wikipedia.org/wiki/RSA_(cryptosystem) and say in one sentence what RSA is used for.", "answer": "RSA is used for secure data transmission and digital signature.", "sec": 7.5}];
+    const TOOLMETA = {
+      "search-and-fetch":{label:"ask the web", color:"var(--t-search)"},
+      "url-fetch":{label:"read a page", color:"var(--t-fetch)"},
+      "fs":{label:"read a file", color:"var(--t-fs)"}
+    };
+    const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    function fmtPrompt(p){
+      // show the imperative verb + rest; keep it as typed
+      return esc(p);
+    }
+    const grid = document.getElementById("examples");
+    function render(filter){
+      const rows = EXAMPLES.filter(e => filter==="all" || e.tool===filter);
+      grid.innerHTML = rows.map(e=>{
+        const m = TOOLMETA[e.tool];
+        return `<div class="card">
+          <span class="badge" style="--bc:${m.color}">${m.label}</span>
+          <div class="q"><span class="qk">$ </span>${fmtPrompt(e.prompt)}</div>
+          <div class="a">${esc(e.answer)}</div>
+          <div class="secs">apfel-mcp-${e.tool} &middot; ${e.sec}s &middot; on-device</div>
+        </div>`;
+      }).join("");
+    }
+    const filters = [["all","All ("+EXAMPLES.length+")"],
+      ["search-and-fetch","Ask the web"],["url-fetch","Read a page"],["fs","Read a file"]];
+    document.getElementById("filters").innerHTML = filters.map(([k,l],i)=>
+      `<button class="fbtn" data-f="${k}" aria-pressed="${i===0}">${l}</button>`).join("");
+    document.querySelectorAll(".fbtn").forEach(b=>b.addEventListener("click",()=>{
+      document.querySelectorAll(".fbtn").forEach(x=>x.setAttribute("aria-pressed","false"));
+      b.setAttribute("aria-pressed","true"); render(b.dataset.f);
+    }));
+    render("all");
   </script>
 </body>
 </html>
