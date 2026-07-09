@@ -5,11 +5,22 @@
 [![Website](https://img.shields.io/badge/web-apfel--mcp.franzai.com-16A34A)](https://apfel-mcp.franzai.com)
 [![#agentswelcome](https://img.shields.io/badge/%23agentswelcome-PRs%20welcome-0066cc?style=for-the-badge&labelColor=0d1117&logo=probot&logoColor=white)](#contributing-new-mcps)
 
-Token-budget-optimized MCP (Model Context Protocol) servers for [apfel](https://github.com/Arthur-Ficial/apfel), the command-line wrapper for Apple's on-device FoundationModels LLM.
+**apfel runs Apple's on-device model - it cannot reach the internet or read your files on its own.** apfel-mcp is four small tools that add exactly those abilities, and nothing else. Each returns a result already trimmed to fit apfel's tiny **4096-token** context window (not truncated after the fact).
 
-apfel's context window is **4096 tokens**. These MCPs are designed from the ground up to produce tiny, useful tool results that fit that budget — not to truncate afterward.
+They are [MCP](https://modelcontextprotocol.io) servers: you attach one to apfel with `--mcp`, and the model calls it when it needs to.
 
-## The four MCPs
+## Which tool do I need?
+
+| You want to... | Use | You give it | Note |
+|---|---|---|---|
+| Read a specific web page | `apfel-mcp-url-fetch` | a URL | article text, ads stripped |
+| Search the web | `apfel-mcp-ddg-search` | a search query | experimental (DuckDuckGo scrape) |
+| Ask a question that needs the web | `apfel-mcp-search-and-fetch` | a question | searches **and** reads, in one call - start here |
+| Read a local text file | `apfel-mcp-fs` | a file path | read-only, no writing/deleting |
+
+Not sure? Use **`apfel-mcp-search-and-fetch`** - it covers most "look something up on the web and answer" needs in a single, token-cheap tool call.
+
+## The four MCPs, in detail
 
 - **`apfel-mcp-url-fetch`** — fetch a web page, extract the main article body via Readability, return clean markdown. Default ~4000 chars, hard cap 6000 chars (~1500 tokens). SSRF guards: `http`/`https` only, private-network blocklist, 10-second timeout, 2 MB download cap.
 - **`apfel-mcp-ddg-search`** — DuckDuckGo web search, no API key required. Returns top 5 results in ~300 tokens. **Experimental, unofficial, scraping-based** — DuckDuckGo does not provide a public search API, so this uses their HTML endpoint. Expect occasional breakage. See [ddg-search caveats](#ddg-search-caveats).
