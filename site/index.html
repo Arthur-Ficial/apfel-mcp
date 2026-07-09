@@ -75,10 +75,12 @@
     /* example cards */
     .ex{display:grid;grid-template-columns:1fr;gap:12px}
     @media(min-width:720px){.ex{grid-template-columns:1fr 1fr}}
-    .card{border:1px solid var(--line);border-radius:var(--r);padding:16px;background:#fff;display:flex;flex-direction:column;gap:9px}
+    .card{border:1px solid var(--line);border-radius:var(--r);padding:16px;background:#fff;display:flex;flex-direction:column;gap:10px}
     .badge{align-self:flex-start;font-family:var(--mono);font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;color:#fff;background:var(--bc)}
-    .q{font-family:var(--mono);font-size:12.5px;color:var(--ink);line-height:1.5}
-    .q .qk{color:var(--ink-soft)}
+    .cmd{font-family:var(--mono);font-size:12px;line-height:1.55;background:#0f1116;color:#e6e9ef;padding:10px 12px;border-radius:9px;overflow-wrap:anywhere;white-space:pre-wrap;cursor:pointer;position:relative}
+    .cmd .pr{color:#7d8697}.cmd .cx{color:#7bd88f}.cmd .arg{color:#e6e9ef}
+    .cmd .cp{position:absolute;top:7px;right:9px;font-size:10px;color:#7d8697}
+    .cmd:hover .cp{color:#e6e9ef}.cmd.copied .cp{color:#7bd88f}
     .a{font-size:14px;color:var(--ink-soft);border-left:2px solid var(--line);padding-left:11px}
     .a strong{color:var(--ink)}
     .secs{font-family:var(--mono);font-size:11px;color:#9aa1ad;margin-top:auto}
@@ -183,23 +185,29 @@
       "fs":{label:"read a file", color:"var(--t-fs)"}
     };
     const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-    function fmtPrompt(p){
-      // show the imperative verb + rest; keep it as typed
-      return esc(p);
-    }
+    // the exact, copy-pasteable command that was run for this example
+    const cmdFor = e => `apfel --mcp $(which apfel-mcp-${e.tool}) "${e.prompt}"`;
     const grid = document.getElementById("examples");
     function render(filter){
       const rows = EXAMPLES.filter(e => filter==="all" || e.tool===filter);
       grid.innerHTML = rows.map(e=>{
         const m = TOOLMETA[e.tool];
+        const i = EXAMPLES.indexOf(e);
         return `<div class="card">
           <span class="badge" style="--bc:${m.color}">${m.label}</span>
-          <div class="q"><span class="qk">$ </span>${fmtPrompt(e.prompt)}</div>
+          <div class="cmd" data-i="${i}" title="click to copy"><span class="pr">$</span> <span class="cx">apfel --mcp $(which apfel-mcp-${e.tool})</span> <span class="arg">${esc('"'+e.prompt+'"')}</span><span class="cp">copy</span></div>
           <div class="a">${esc(e.answer)}</div>
-          <div class="secs">apfel-mcp-${e.tool} &middot; ${e.sec}s &middot; on-device</div>
+          <div class="secs">${e.sec}s &middot; on-device &middot; $0.00</div>
         </div>`;
       }).join("");
     }
+    grid.addEventListener("click", ev=>{
+      const c = ev.target.closest(".cmd"); if(!c) return;
+      const e = EXAMPLES[+c.dataset.i];
+      (navigator.clipboard ? navigator.clipboard.writeText(cmdFor(e)) : Promise.reject()).catch(()=>{});
+      c.classList.add("copied"); c.querySelector(".cp").textContent="copied!";
+      setTimeout(()=>{c.classList.remove("copied"); c.querySelector(".cp").textContent="copy";},1300);
+    });
     const filters = [["all","All ("+EXAMPLES.length+")"],
       ["search-and-fetch","Ask the web"],["url-fetch","Read a page"],["fs","Read a file"]];
     document.getElementById("filters").innerHTML = filters.map(([k,l],i)=>
