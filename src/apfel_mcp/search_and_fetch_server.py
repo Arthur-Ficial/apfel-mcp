@@ -24,6 +24,7 @@ from typing import Any
 
 from apfel_mcp import __version__
 from apfel_mcp.common.arg_tolerance import extract_int, extract_string
+from apfel_mcp.common.budget import truncate_to
 from apfel_mcp.common.fetch import FetchError, fetch_and_extract
 from apfel_mcp.common.mcp_protocol import ToolResult, run_server
 from apfel_mcp.common.search import SearchError, search
@@ -147,7 +148,9 @@ def search_and_fetch(
 
     if not search_result.results:
         # DDG returned nothing. Give the model a friendly no-results block.
-        return f"Search: {stripped}\n\nNo results for: {stripped}"
+        message = f"Search: {stripped}\n\nNo results for: {stripped}"
+        body, _ = truncate_to(message, HARD_CAP_CHARS_COMBINED)
+        return body
 
     # Step 2: fetch each URL. Track successes and failures separately so
     # we can tell whether EVERYTHING failed (which raises) vs partial

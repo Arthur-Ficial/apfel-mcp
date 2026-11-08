@@ -196,6 +196,33 @@ def test_no_search_results_returns_no_results_message(monkeypatch):
     assert "nothingburger xyzzy" in result
 
 
+@pytest.mark.parametrize("query_length", [2486, 2487, 2488, 10_000])
+def test_no_search_results_obeys_hard_cap(monkeypatch, query_length):
+    """The empty-results early return must respect the total output budget too."""
+    query = "x" * query_length
+    monkeypatch.setattr(
+        "apfel_mcp.search_and_fetch_server.search",
+        lambda query, max_results: _mk_search_result(query, []),
+    )
+
+    def unexpected_fetch(*args, **kwargs):
+        pytest.fail("An empty search must not fetch any pages")
+
+    monkeypatch.setattr(
+        "apfel_mcp.search_and_fetch_server.fetch_and_extract", unexpected_fetch
+    )
+
+    result = _handle_tool_call("search", {"query": query})
+    unbounded = f"Search: {query}\n\nNo results for: {query}"
+    assert result.is_error is False
+    assert len(result.text) <= HARD_CAP_CHARS_COMBINED
+    if len(unbounded) <= HARD_CAP_CHARS_COMBINED:
+        assert result.text == unbounded
+    else:
+        assert result.text.startswith("Search: ")
+        assert "truncated" in result.text
+
+
 def test_hard_cap_enforced_on_combined_output(monkeypatch):
     """Even with 3 maxed-out results, total output must stay under the hard cap."""
     huge_body = "word " * 5000  # ~25000 chars per result
