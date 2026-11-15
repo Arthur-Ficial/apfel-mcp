@@ -1,6 +1,6 @@
 # apfel-mcp
 
-[![Version 0.2.0](https://img.shields.io/badge/version-0.2.0-blue)](https://github.com/Arthur-Ficial/apfel-mcp/releases)
+[![Version 0.2.1](https://img.shields.io/badge/version-0.2.1-blue)](https://github.com/Arthur-Ficial/apfel-mcp/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Website](https://img.shields.io/badge/web-apfel--mcp.franzai.com-16A34A)](https://apfel-mcp.franzai.com)
 [![#agentswelcome](https://img.shields.io/badge/%23agentswelcome-PRs%20welcome-0066cc?style=for-the-badge&labelColor=0d1117&logo=probot&logoColor=white)](#contributing-new-mcps)

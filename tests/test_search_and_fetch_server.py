@@ -240,6 +240,9 @@ def test_hard_cap_enforced_on_combined_output(monkeypatch):
 
     result = search_and_fetch("test", results=3, max_chars_per_result=2500)
     assert len(result) <= HARD_CAP_CHARS_COMBINED
+    # Same shared budget helper (and suffix) as every other capped path.
+    assert result.rstrip().endswith(" chars]")
+    assert "[... truncated at " in result
 
 
 def test_max_chars_per_result_respected(monkeypatch):

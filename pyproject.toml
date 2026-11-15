@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "apfel-mcp"
-version = "0.2.0"
+version = "0.2.1"
 description = "Token-budget-optimized MCP servers for apfel (url-fetch + ddg-search + search-and-fetch + fs)"
 readme = "README.md"
 license = { text = "MIT" }

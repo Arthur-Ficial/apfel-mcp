@@ -198,11 +198,7 @@ def search_and_fetch(
 
     # Step 3: hard cap on combined output. Even if each per-result cap was
     # respected, the combined text could still overshoot the total cap.
-    if len(combined) > HARD_CAP_CHARS_COMBINED:
-        combined = (
-            combined[: HARD_CAP_CHARS_COMBINED - 40]
-            + "\n\n[... truncated to fit token budget]"
-        )
+    combined, _ = truncate_to(combined, HARD_CAP_CHARS_COMBINED)
     return combined
 
 
