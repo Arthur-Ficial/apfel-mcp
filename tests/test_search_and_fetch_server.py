@@ -325,6 +325,84 @@ def test_handle_tool_call_search_error_becomes_is_error_true(monkeypatch):
     assert "rate" in result.text.lower()
 
 
+@pytest.mark.parametrize("error_type", [SearchError, RuntimeError])
+@pytest.mark.parametrize("message_char", ["x", "雪"])
+@pytest.mark.parametrize("length", [4999, 5000, 5001, 10000])
+def test_handled_exception_output_obeys_budget(monkeypatch, error_type, message_char, length):
+    """Budget the complete diagnostic, while leaving messages within the cap intact."""
+    prefix = (
+        "" if error_type is SearchError else "unexpected error in search-and-fetch: RuntimeError: "
+    )
+    message = message_char * (length - len(prefix))
+
+    def fail_search(query, max_results):
+        raise error_type(message)
+
+    monkeypatch.setattr("apfel_mcp.search_and_fetch_server.search", fail_search)
+    result = _handle_tool_call("search", {"query": "offline fixture"})
+
+    assert result.is_error is True
+    assert len(result.text) <= HARD_CAP_CHARS_COMBINED
+    if length <= HARD_CAP_CHARS_COMBINED:
+        assert result.text == prefix + message
+    else:
+        assert result.text.startswith(prefix + message[:80])
+        assert "[... truncated at " in result.text
+
+
+@pytest.mark.parametrize("tool_name", ["search", "web_search", "search_and_fetch"])
+def test_all_fetches_fail_with_long_query_returns_bounded_error(monkeypatch, tool_name):
+    """The real total-failure diagnostic includes the query, which can exceed the cap."""
+    query = "q" * 6000
+    monkeypatch.setattr(
+        "apfel_mcp.search_and_fetch_server.search",
+        lambda query, max_results: _mk_search_result(query, ["https://example.invalid/"]),
+    )
+
+    def fail_fetch(url, max_chars):
+        raise FetchError("offline fixture: page unavailable")
+
+    monkeypatch.setattr("apfel_mcp.search_and_fetch_server.fetch_and_extract", fail_fetch)
+    result = _handle_tool_call(tool_name, {"query": query})
+
+    assert result.is_error is True
+    assert len(result.text) <= HARD_CAP_CHARS_COMBINED
+    assert result.text.startswith("search_and_fetch: all fetches failed for query ")
+    assert "[... truncated at " in result.text
+
+
+@pytest.mark.parametrize("error_type", [SearchError, RuntimeError])
+@pytest.mark.parametrize("tool_name", ["search", "web_search"])
+def test_stdio_exception_result_is_bounded(monkeypatch, error_type, tool_name):
+    """Check the decoded MCP content field, not the JSON-escaped wire length."""
+    def fail_search(query, max_results):
+        raise error_type("offline diagnostic: " + "x" * 10000)
+
+    monkeypatch.setattr("apfel_mcp.search_and_fetch_server.search", fail_search)
+    requests = [
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+        {
+            "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+            "params": {"name": tool_name, "arguments": {"query": "offline fixture"}},
+        },
+    ]
+    monkeypatch.setattr("sys.stdin", io.StringIO("".join(json.dumps(r) + "\n" for r in requests)))
+    stdout = io.StringIO()
+    monkeypatch.setattr("sys.stdout", stdout)
+    main()
+
+    responses = [json.loads(line) for line in stdout.getvalue().splitlines()]
+    assert len(responses) == 2
+    assert responses[1]["id"] == 2
+    result = responses[1]["result"]
+    assert result["isError"] is True
+    assert result["content"][0]["type"] == "text"
+    text = result["content"][0]["text"]
+    assert len(text) <= HARD_CAP_CHARS_COMBINED
+    assert "offline diagnostic: " in text
+    assert "[... truncated at " in text
+
+
 def test_handle_tool_call_accepts_search_and_fetch_alias(monkeypatch):
     """Fallback: model calls the old name. Should still dispatch."""
     monkeypatch.setattr(

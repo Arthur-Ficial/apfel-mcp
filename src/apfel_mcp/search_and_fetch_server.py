@@ -247,12 +247,12 @@ def _handle_tool_call(name: str, args: dict[str, Any]) -> ToolResult:
             max_chars_per_result=per_result_cap,
         )
     except SearchError as exc:
-        return ToolResult(text=str(exc), is_error=True)
+        body, _ = truncate_to(str(exc), HARD_CAP_CHARS_COMBINED)
+        return ToolResult(text=body, is_error=True)
     except Exception as exc:
-        return ToolResult(
-            text=f"unexpected error in search-and-fetch: {type(exc).__name__}: {exc}",
-            is_error=True,
-        )
+        message = f"unexpected error in search-and-fetch: {type(exc).__name__}: {exc}"
+        body, _ = truncate_to(message, HARD_CAP_CHARS_COMBINED)
+        return ToolResult(text=body, is_error=True)
 
     return ToolResult(text=body, is_error=False)
 
